@@ -1,0 +1,403 @@
+#ifndef	__SOCKET_C__
+#define __SOCKET_C__
+
+#include<stdio.h>                                                                                               
+#include<stdlib.h>
+#include<string.h>
+#include<unistd.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<time.h>
+#include<pthread.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "../public/include/debug.h"
+#include "../public/include/symbol.h"
+#include "../public/include/type.h"
+#include "../public/include/string.h"
+
+
+#include "socket.h"
+
+
+
+/* 创建socket 并监听，返回listen 的 fd */
+INT socket_CreateListenFd(VOID)
+{
+	ULONG ulRet;
+	struct sockaddr_in servaddr;
+	int listenfd;
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+	if(-1 == listenfd)
+	{
+		DBG_PRINTF("socket create failed!");
+	}
+	bzero(&servaddr, sizeof(struct sockaddr_in));
+	
+	servaddr.sin_family = AF_INET;
+	
+	/* INADDR_ANY (0.0.0.0)任意地址 */
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port = htons(SERV_PORT);
+	
+	ulRet = bind(listenfd, (struct sockaddr *)&servaddr, sizeof(struct sockaddr_in));
+	if(-1 == ulRet)
+	{
+		DBG_PRINTF("socket bind failed!");
+	}
+	
+	ulRet = listen(listenfd, 20);
+	if(-1 == ulRet)
+	{
+		DBG_PRINTF("socket listen failed!");
+	}
+
+	return listenfd;
+}
+
+/* 设置打包要返回数据的数据头 */
+char socket_SetHeadInfo(UCHAR *headStr,
+								int status, 
+								int length, 
+								char * type)
+{
+        switch(status){
+                case 200:strcpy(headStr, "HTTP/1.1 200 OK\r\n");break;
+                case 302:strcpy(headStr, "HTTP/1.1 302 OK\r\n");break;
+                case 404:strcpy(headStr, "HTTP/1.1 404 NOT FOUND\r\n");break;
+                case 500:strcpy(headStr, "HTTP/1.1 500 ERROR\r\n");break;
+                default:break;
+        }       
+        strcat(headStr, "SERVER:NSWebServer\r\n");
+        time_t timep;
+        time(&timep);
+        char time_str[25];
+        sprintf(time_str, (CHAR *)ctime(&timep));
+        char mon[4],week[4],timestr[9],year[5];
+        int day;
+        sscanf(time_str, "%s %s %d %s %s", week, mon, &day, timestr, year);
+        char temp[50];
+        sprintf(temp, "Date:%s, %02d %s %s %s GMT\r\n", week, day, mon, year, timestr );
+        strcat(headStr, temp);
+        char str[50];
+        sprintf(str, "Content-Length:%d\r\n", length);
+        strcat(headStr, str);
+        strcat(headStr, "Keep-Alive:timeout=5,max=100\r\n");
+        strcat(headStr, "Connection:keep-alive\r\n");
+        strcat(headStr, "Accept-Ranges:bytes\r\n");
+        sprintf(str, "Content-Type:%s\n\n", type);
+        strcat(headStr, str);
+		DBG_PRINT_LOG("respHeadStr.txt", headStr,strlen(headStr));
+			
+}
+
+
+/* 把数据行解析的数组中 */
+//ID=123&ID2=456&ID3=789&submit=-2.194851E-4760.000000%E4%BA-0X1.007FP-1554
+ULONG web_ProcSubmitMsg(IN const UCHAR *pucSMsgBuf, SubMsg_S * ppstSMsg)
+{
+	ULONG ulP = 0;
+	ULONG ulNumOfSMsg = 0;
+	UCHAR aucFormatBuf[2048];
+	ULONG ulNP = 0;
+	ULONG ulVP = 0;
+	
+	
+	for(ulP = 0; 0 != *(pucSMsgBuf + ulP);)
+	{
+		for(ulNP = 0; 
+			'=' != *(pucSMsgBuf + ulP) && 0 != *(pucSMsgBuf + ulP); 
+			ulNP++, ulP++)
+		{
+			ppstSMsg[ulNumOfSMsg].pcSMName[ulNP] = *(pucSMsgBuf + ulP);
+		}
+		ulP++;
+		for(ulVP = 0; 
+			'&' != *(pucSMsgBuf + ulP) && 0 != *(pucSMsgBuf + ulP); 
+			ulVP++, ulP++)
+		{
+			ppstSMsg[ulNumOfSMsg].pcSMValue[ulVP] = *(pucSMsgBuf + ulP);
+		}
+		ulP++;
+
+		ulNumOfSMsg++;
+	}
+	
+	return ulNumOfSMsg;
+	
+}
+
+ULONG web_splitHttpHeadMsg();
+
+/* 获得头信息的最后一行( POST来的数据行，暂时是的 ) */
+CHAR * web_getSMsgATEOFHH(IN const CHAR * pcBuf)
+{
+	const CHAR *pcNow = NULL;
+	const CHAR *pcNext = NULL;
+	ULONG ulPc = 0;
+
+	pcNow = pcBuf;
+	pcNext = pcBuf + 1;
+
+	for(ulPc = 0; 0 != *(pcBuf + ulPc); ulPc++)
+	{
+		if(('\r' == *(pcBuf + ulPc)) && ('\n' == *(pcBuf + ulPc + 1)))
+		{
+			pcNow = pcNext;
+			pcNext= pcBuf + ulPc + 2;
+		}
+	}
+
+	return (CHAR *)pcNext;
+}
+
+/* 获取用户请求的文件的信息 */
+ULONG web_getHttpReqMsg(IN CHAR *pcBuf, HttpHeadMsg_S *pstHHMsg)
+{
+	UCHAR ucSMsgBuf[2048] 	= {0};
+	UCHAR *pucSMsgB			= NULL;
+	ULONG ulNumOfSMsg 		= 0;
+
+	
+		/* 解析Http报文头 */
+        sscanf(pcBuf, "%s %s HTTP/1.1", pstHHMsg->cHttpType, pstHHMsg->cHttpReqURL);
+        sscanf(pstHHMsg->cHttpReqURL, "/%[^?]?%s", 
+								pstHHMsg->cHttpReqFile,
+								ucSMsgBuf);
+        sscanf(pstHHMsg->cHttpReqFile, "%[^.].%s", 
+								pstHHMsg->cHttpReqFileName, 
+								pstHHMsg->cHttpReqFileType);
+		if(strcmp(pstHHMsg->cHttpType, "GET") == 0)
+		{
+			pstHHMsg->cHttpTypeSet = HTTP_REQ_TYPE_GET;
+		}
+		else if(strcmp(pstHHMsg->cHttpType, "POST") == 0)
+		{
+			pstHHMsg->cHttpTypeSet = HTTP_REQ_TYPE_POST;
+		}
+
+		/* 解析报文头中携带的提交信息 */
+		if((HTTP_REQ_TYPE_GET == pstHHMsg->cHttpTypeSet) && 
+			(strlen(ucSMsgBuf) > 0))
+		{
+			ulNumOfSMsg = web_ProcSubmitMsg(ucSMsgBuf, pstHHMsg->stSMsg);
+		}
+		else if(HTTP_REQ_TYPE_POST== pstHHMsg->cHttpTypeSet)
+		{
+			pucSMsgB = web_getSMsgATEOFHH(pcBuf);
+			
+			ulNumOfSMsg = web_ProcSubmitMsg(pucSMsgB, pstHHMsg->stSMsg);
+			
+		}
+		pstHHMsg->ulNumOfSMsg = ulNumOfSMsg;
+
+		while(ulNumOfSMsg--)
+		{
+			DBG_PRINTF("NAME  = %s", pstHHMsg->stSMsg[ulNumOfSMsg].pcSMName);
+			DBG_PRINTF("VALUE = %s", pstHHMsg->stSMsg[ulNumOfSMsg].pcSMValue);
+		}
+		
+        DBG_PRINTF("request file %s", pstHHMsg->cHttpReqFile);
+		
+        if(strcmp((const CHAR *)pstHHMsg->cHttpReqFileType, "html") == 0 || strcmp(pstHHMsg->cHttpReqFileType, "php") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "text/html");
+        }else if(strcmp(pstHHMsg->cHttpReqFileType, "css") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "text/css");
+        }else if(strcmp(pstHHMsg->cHttpReqFileType, "js") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "application/x-javascript");
+        }else if(strcmp(pstHHMsg->cHttpReqFileType, "png") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "image/png");
+        }else if(strcmp(pstHHMsg->cHttpReqFileType, "jpg") == 0 || strcmp(pstHHMsg->cHttpReqFileType, "jpeg") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "image/jpeg");
+        }else if(strcmp(pstHHMsg->cHttpReqFileType, "gif") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "image/gif");
+        }else if(strcmp(pstHHMsg->cHttpReqFileType, "ico") == 0){
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "image/x-icon");
+        }else{
+                 strcpy(pstHHMsg->cHttpReqFileTrueType, "text/html");
+        }
+
+		return ERROR_SUCCESS;
+}        
+
+ULONG socket_GetReqFileText(HttpHeadMsg_S *pstHHMsg, 
+									UCHAR *pcFileFUB, 
+									ULONG ulReqFileSize)
+{
+	ULONG ulRet = 0;
+	INT fd;
+	INT len, status;
+	
+	/* open file */
+	fd = open(pstHHMsg->cHttpReqFile, O_RDONLY);
+	if(-1 == fd)
+	{
+		DBG_PRINTF("Open request file :%s failed!", pstHHMsg->cHttpReqFile);
+		status = 404;
+				
+		strcat(pcFileFUB, "NOT FOUND");
+		len = strlen(pcFileFUB);
+	}
+	else
+	{
+		status = 200;
+				
+		len = read(fd, pcFileFUB, ulReqFileSize);
+		if(ulReqFileSize != len)
+		{
+			DBG_PRINTF("read request file failed!");
+		}
+				
+		close(fd);
+	}
+
+	return status;
+
+}
+
+
+STATIC ULONG web_GetRespData(HttpHeadMsg_S *pstHHMsg, UCHAR *pcRespBUF)
+{
+	ULONG ulRet					= 0;
+	ULONG ulTextLen				= 0;
+	ULONG ulReqFileSize 		= 0;
+	ULONG ulRespHeadLen 		= 0;
+	INT  status					= 0;
+	
+	UCHAR *pcFileFUB			= NULL;
+
+	struct stat stReqFileStat 	= {0};
+
+	/* 获取文件大小 */
+	ulRet = stat(pstHHMsg->cHttpReqFile, &stReqFileStat);
+	if(-1 == ulRet)
+	{
+		ulReqFileSize = RESP_FAILED_BUF_MAX;
+		DBG_PRINTF("get file stat failed!");
+	}
+	else
+	{
+		ulReqFileSize = stReqFileStat.st_size;
+	}
+
+	/* 分配临时内存 */
+	pcFileFUB = mem_alloc(ulReqFileSize);
+
+	/* 读取文件内容 */
+	status = socket_GetReqFileText(pstHHMsg, pcFileFUB, ulReqFileSize);
+
+	/*
+	if(HTTP_REQ_TYPE_GET== pstHHMsg->cHttpTypeSet)
+	{
+	}
+	else if(HTTP_REQ_TYPE_POST== pstHHMsg->cHttpTypeSet)
+	{
+		socket_GetRegPostText(pstHHMsg, pcRespBUF);
+	}
+	*/
+	DBG_PRINTF("SetHeadInfo ...");
+
+	/* 设置报文头 */
+	socket_SetHeadInfo(pcFileFUB , 
+						status, 
+						ulReqFileSize, 
+						pstHHMsg->cHttpReqFileTrueType);
+
+	DBG_PRINTF("SetHeadInfo SUCCESS!");
+	
+	ulRespHeadLen = strlen(pcFileFUB);
+	
+	/* 挂上文件内容 */
+	memcpy((pcRespBUF + ulRespHeadLen), pcFileFUB, ulReqFileSize);
+	
+	free(pcFileFUB);
+	
+	ulTextLen = ulRespHeadLen + ulReqFileSize;
+	return ulTextLen;
+}
+
+VOID * thread_RespAcc(VOID *arg)
+{
+	ULONG ulRet = 0;
+	INT connfd;
+	CHAR buf[MAXLINE];
+	ULONG ulHttpHeadSize = 0;
+	HttpHeadMsg_S * pstHHMsg = NULL;
+	UCHAR *pcRespBUF	= NULL;
+	ULONG ulTextLen	= 0;
+
+	connfd = *((INT *)arg);
+		
+	/* 接收报文 */
+	ulHttpHeadSize = read(connfd, buf, MAXLINE);
+	DBG_PRINT_LOG("reqHead.txt",buf,ulHttpHeadSize);
+	
+	DBG_PRINTF("Read Http Head Success!");
+	
+	pstHHMsg = mem_alloc(sizeof(HttpHeadMsg_S));
+	
+	/* 获取要请求文件的信息 */
+	ulRet = web_getHttpReqMsg(buf, pstHHMsg);
+	if(ERROR_SUCCESS != ulRet)
+	{
+		DBG_PRINTF("get http reg msg failed!");
+	}
+	
+	/* 处理请求并生成文件 */
+	WEB_ProcReq(pstHHMsg);
+
+	/* 获取打包返回的数据 */
+	pcRespBUF = mem_alloc(RESP_BUF_MAX);
+	
+	web_GetRespData(pstHHMsg, pcRespBUF);
+
+	/* 返回用户请求的数据 */
+	send(connfd, pcRespBUF, ulTextLen,0);
+	
+	close(connfd);
+	free(pcRespBUF);
+	free(pstHHMsg);
+	
+	pthread_exit((VOID *)0);
+}
+
+ULONG socket_AcceptHttp(IN INT iListenFd)
+{
+	ULONG ulRet = 0;
+	struct sockaddr_in  cliaddr;
+	socklen_t cliaddr_len;
+	INT connfd;
+	pthread_t ptid_RA[1000];
+	ULONG ptid_index = 0;
+
+	printf("ACCEPT....\n");
+	while(1){
+			cliaddr_len = sizeof(struct sockaddr_in);
+			connfd = accept(iListenFd, (struct sockaddr *)&cliaddr, &cliaddr_len);
+			if(-1 == connfd)
+			{
+				DBG_PRINTF("accept failed!");
+			}
+
+			ulRet = pthread_create(&ptid_RA[ptid_index], NULL, thread_RespAcc, (VOID *)(&connfd));
+			if(0 != ulRet)
+			{
+				DBG_PRINTF("thread create failed!");
+			}
+			ptid_index++;
+	}
+}
+
+INT main(VOID)
+{
+	INT	iListenFd;
+	iListenFd = socket_CreateListenFd();
+	socket_AcceptHttp(iListenFd);
+	
+	return 0;
+}
+
+#endif //__SOCKET_C__

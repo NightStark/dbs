@@ -1,0 +1,48 @@
+﻿将初始化，分离开，
+	<Thread_server_CreateWithEpQMsg()>这个函数的第三个参数改为宏，起函数注册到专门，单独模块(Thread 
+	Receive)，
+	在接收到消息后， 单独模块(Thread Receive)再去调用trigger模块，
+	trigger模块再去调用分别得业务处理模块，
+
+
+	 Initialize --->:			:								:			:
+					:ThreadReady:								:			:
+					:	        :----->receive Msg --->			:			:
+					:	        :	   (Thread Message)			:			:
+					:	        :	   (TCP Message)			:			:
+					:	        :	   (TCP(web-http) Message)	:			:
+					:	        :								:Trigger--->:
+					:			:	        					:	        :
+					:			:	        					:			:  [WORK]
+					:			:	        					:			:    ^
+					:			:	        					:			:  	 |
+					:			:	        					:			:  	 | (线程间的交互)
+					:			:	        					:			:  	 |
+					:			:	        					:			:  	 V
+					:			:	        					:			:  [WORK]
+					:			:	        					:			:    ^
+					:			:	        					:			: 	 |
+					:			:	        					:			:  	 |(线程间的交互)
+					:			:	        					:			:  	 |
+					:			:	        					:			:  	 V
+					:			:	        					:			:  [WORK]
+--遗留--
+4,http访问需要安全加密支持
+1,bitmap与链表初始化的问题
+2,INT str_safe_cmp(const CHAR *str1, const CHAR *str2, unsigned long str1Len)
+	此函数存在问题，at:if(str1[i] == str2[i] && str1[i] != 0 && str2[i] != 0)
+3.Table_type_DataCreate
+	此函数对字符串的拷贝次数要不要特殊化
+
+--遗留升级--
+1.客户端的链接创建要放到启动线程后，
+2.链接成后，在链接线程里起(CLIENT_work_ThreadStart)工作线程，存在和链接线程竞争socket资源的问题
+--上次问题--
+
+code.taobao.com
+	用户名：nightstart
+	密码：051031448
+
+
+
+

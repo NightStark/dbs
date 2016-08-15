@@ -1,0 +1,1 @@
+g++ -I /opt/gtest/include/ -o main -lpthread foo_test.cpp -lgtest

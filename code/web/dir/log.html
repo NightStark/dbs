@@ -1,0 +1,148 @@
+  <!DOCTYPE HTML>
+<html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>log</title>
+  <style type="text/css">
+  body,td,th {
+      font-size: 12px;
+      font-family:"新宋体";
+      background-color: #FFF;
+  }
+  img{ border:0;}
+  ul ,li{ margin:0; padding:0; list-style:none;}
+  ul.table_log_list_heaed{
+	height:30px;
+	clear:both;
+	color: #000;
+	background-color: #FFF;
+}
+  ul.table_log_list_heaed li{
+	background:#999;
+	float:left;
+	border-right:1px #fff solid;
+	line-height:30px;
+	text-align:center;
+	font-weight:bold;
+	color: #000;
+}
+  ul.table_log_list_elment{
+	height:30px;
+	clear:both;
+	color: #000;
+	background-color: #FFF;
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: #666;
+}
+  ul.table_log_list_elment li{
+	background:#fff;
+	float:left;
+	line-height:30px;
+	text-align:left;
+	border: 0px none #fff;
+	font-family: "Courier New", Courier, monospace;
+	padding-right: 2px;
+	padding-left: 2px;
+}
+  .log_no{
+	width:8%;
+}
+  .log_c{
+	width:40%;
+	font-family: Consolas;
+}
+  .log_stt{
+	width:20%;
+}
+  .log_func{
+	width:20%;
+}
+  .log_ln{
+	width:10%;
+}
+  .name4{ width:100px; text-align:left; }
+  ul.table_log_list_heaed li.name4{ width:100px; text-align:left; }
+  ul.table_log_list_heaed li .taxis{ float:right; margin-right:5px; width:12px; text-align:right; margin-top:8px; _margin-top:4px; vertical-align:middle;}
+  ul.table_log_list_heaed li .taxis_title{ float:left; margin-left:5px; text-align:left; }
+  .liter{ margin:0;margin-bottom:4px;_margin-bottom:-2px;}
+  .drop{ margin:0;}
+  
+  .table_left{ width:30%; overflow:hidden; float:left;}
+  .table_right{ width:70%; overflow:hidden; float:right;}
+  .table_left div{ background:#ececd8;margin-right:1px;margin-bottom:1px; text-align:right; padding:3px 5px;}
+  .table_right div{ background:#eee; margin-bottom:1px; padding:3px 5px;}
+  .table_height_30{ height:30px; line-height:30px;_line-height:25px; }
+  .table_height_100{ height:100px; display:block; }
+  .table_height_100_left{ height:100px; line-height:100px; }
+  .set_value{
+      float:left;
+      margin: 0px;
+      border-top-style: solid;
+      border-right-style: solid;
+      border-bottom-style: solid;
+      border-left-style: solid;
+      border-top-width: 0px;
+      border-right-width: 0px;
+      border-bottom-width: 0px;
+      border-left-width: 0px;
+      padding-top: 0px;
+      padding-right: 0px;
+      padding-bottom: 0px;
+      padding-left: 20px;
+  }
+  
+  .table_height_301 {height:30px; line-height:30px;_line-height:25px; }
+  .c_trig{
+	float:left;
+	padding-left: 10px;
+	text-decoration: underline;
+}
+.c_trig_b{
+	height:25px;
+	line-height:20px;
+	line-height:20px;
+}
+  #ml {
+	height: 730px;
+}
+  </style>
+  
+  </head>
+  <script src="jquery.js">
+    </script>
+<script>
+		$(document).ready(function(){
+			/* 加载log进程产生的表格 */
+			$("#main_log").load("rt.html",function(responseTxt,statusTxt,xhr){
+				if(statusTxt=="success")
+					//alert("外部内容加载成功！");
+				if(statusTxt=="error")
+					alert("Error: "+xhr.status+": "+xhr.statusText);
+			});
+  		})
+    </script>
+
+<body onLoad="">
+<div id="ml">
+  <h3>LOG:</h3>
+<ul class="table_log_list_heaed">
+      <li class="log_no">NO.</li>
+	  <li class="log_c">LOG Content</li>
+      <li class="log_stt">File Name</li>
+      <li class="log_func">Funcion Name</li>
+      <li class="log_ln">Line </li>
+    </ul>
+<ul class="table_log_list_elment">
+    <li id="l_no" class="log_no">131078</li>
+    <li id="l_func" class="log_c">[ddddd]</li>
+    <li id="l_stt" class="log_stt">/d/d/d/</li>
+    <li id="l_func" class="log_func">jfidnfldjf()</li>
+    <li id="l_ln" class="log_ln">256</li>
+</ul> 
+  <div id="main_log"> </div>
+
+  </div>
+</bdiv>
+</body>
+</html>

@@ -1,0 +1,136 @@
+  <!DOCTYPE HTML>
+  <html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>无标题文档</title>
+  <style type="text/css">
+  body,td,th {font-size: 12px; font-family:"新宋体";}
+  img{ border:0;}
+  ul ,li{ margin:0; padding:0; list-style:none;}
+  ul.table1{ height:30px; border-bottom:1px solid #fff; clear:both;}
+  ul.table1 li{ background:#999;float:left; border-right:1px #fff solid; line-height:30px; text-align:center; font-weight:bold;}
+  ul.table2{ height:30px; border-bottom:1px solid #fff; clear:both;}
+  ul.table2 li{ background:#ccc;float:left; border-right:1px #fff solid; line-height:30px; text-align:center;}
+  .name1{ width:50px;}
+  .name2{ width:150px;}
+  .name3{ width:350px;}
+  .name4{ width:100px; text-align:left; }
+  ul.table1 li.name4{ width:100px; text-align:left; }
+  ul.table1 li .taxis{ float:right; margin-right:5px; width:12px; text-align:right; margin-top:8px; _margin-top:4px; vertical-align:middle;}
+  ul.table1 li .taxis_title{ float:left; margin-left:5px; text-align:left; }
+  .liter{ margin:0;margin-bottom:4px;_margin-bottom:-2px;}
+  .drop{ margin:0;}
+  
+  .table_left{ width:30%; overflow:hidden; float:left;}
+  .table_right{ width:70%; overflow:hidden; float:right;}
+  .table_left div{ background:#ececd8;margin-right:1px;margin-bottom:1px; text-align:right; padding:3px 5px;}
+  .table_right div{ background:#eee; margin-bottom:1px; padding:3px 5px;}
+  .table_height_30{ height:30px; line-height:30px;_line-height:25px; }
+  .table_height_100{ height:100px; display:block; }
+  .table_height_100_left{ height:100px; line-height:100px; }
+  
+  
+  
+  .table_height_301 {height:30px; line-height:30px;_line-height:25px; }
+  </style>
+  
+  </head>
+  <script src="jquery.js">
+  </script>
+  <script>
+  $(document).ready(function(){
+    $("#btn1").click(function(){
+      $('#test').load('http://192.168.41.128:8888/65539');
+    })
+  })
+  </script>
+  
+  <body>
+  <h3>简单的表格列表</h3>
+  <ul class="table1">
+      <li class="name1">序号</li>
+      <li class="name2">名称</li>
+      <li class="name3">内容</li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">1</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">2</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">3</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">4</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">5</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+  </ul>
+  <h3>带有排序功能的表格列表</h3>
+  <ul class="table1">
+      <li class="name1">序号</li>
+      <li class="name2">名称</li>
+      <li class="name3">内容</li>
+      <li class="name4">
+          <span class="taxis_title">排序</span>
+          <span class="taxis">
+              <div class="liter"><a href="#"><img src="images/desc.gif" width="10" alt="升序"  /></a></div>
+              <div class="drop"><a href="#"><img src="images/asc.gif" width="10" alt="降序"/></a> </div>
+        </span>   
+      </li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">1</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+      <li class="name4">测试文件内容</li>
+  </ul>
+  <ul class="table2">
+      <li class="name1">2</li>
+      <li class="name2">测试文件</li>
+      <li class="name3">测试文件内容。。。。。</li>
+      <li class="name4">测试文件内容</li>
+  </ul>
+  <div style="clear:both;"></div>
+  <h3>百分比复杂的表格列表</h3>
+  <div class="table_left">
+      <div><span class="table_height_30">带宽：</span></div>
+      <div><span class="table_height_100_left">扩展 IP地址：</span></div>
+  </div>
+  <div class="table_right">
+      <div>
+          <span class="table_height_30">下行：<input  /> <select ><option>Mbit</option></select>
+          <label><input name="checkbox" type="checkbox"  />限制总下行 </label>
+          <input name="button" type="button" class="sys_botton input2_hand" value="确定" />
+      </span>半行高错误，则需把所在的div高度去掉即可。</div>
+      <div><span class="table_height_100">
+      <div style="width:200px;padding:0; float:left;">
+        <textarea name="textarea" id="textarea" style="width:100%; height:85px;"></textarea>
+      </div>
+      <div style="float:left; width:250px;padding:0; margin-left:10px;">
+          <div style="float:left; width:80px; overflow:hidden;padding:0;">
+              <div class="table_height_30" style="text-align:right;">用户名：</div>
+              <div class="table_height_30" style="text-align:right;">密码：</div>
+          </div>
+          <div style="float:right; width:170px;padding:0;">
+              <div class="table_height_30" style="padding:0; margin-top:5px;"><input  style="vertical-align:middle;"  /></div>
+              <div class="table_height_30" style="padding:0; margin-top:5px;"><input  style="vertical-align:middle;"  /></div>
+          </div></div>
+      </span></div>
+      
+  </div>
+  <div style="clear:both"></div>
+  
+  </body>
+  </html>

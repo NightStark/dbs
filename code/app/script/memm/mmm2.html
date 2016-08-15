@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>ECharts</title>
+	<script src="http://libs.baidu.com/jquery/2.1.4/jquery.min.js"></script>
+	<!-- ECharts单文件引入 -->
+	<script src="echarts.js"></script>
+	<script src="mmdata.js"></script>
+	<script type="text/javascript">
+		var g_chat;
+		function gen_ref_list(_data_legend, _it_name){
+			a_l = "<ul class = \"list_ul\">"
+			for (var i=0;i<_data_legend.length;i++)
+			{
+				//标红疑似泄露的连接
+				//if (data_s_mmm[i]["leak"] == 1 && _it_name != "mmmi") {
+				//	ap_class = "red_link";
+				//} else {
+					ap_class = "list_li";
+				//}
+				a_l += "<li id=\""+ _data_legend[i] +"\" _index=\""+ i +"\" _it_name=\""+ _it_name +"\"  ><a class=\"" + ap_class + "\" href = \"javascript:\">" + _data_legend[i] + "<\a></li> ";
+			}
+			a_l += "<li id=\"all\" _index=\"82730100\" _it_name=\""+ _it_name +"\"  ><a class=\"" + ap_class + "\" href = \"javascript:\">ALL<\a></li> ";
+			a_l += "</ul>"
+			return a_l;
+		}
+		
+		function find_leak_p(_data){
+			var _leak_index_l = [];
+			for (var i=0;i<_data.data_legend.length;i++)
+			{
+				a_data = _data.data_s[i]["data"];
+				data_len = a_data.length;
+				_mid_data = a_data[parseInt(data_len / 2)]; //parseInt取整数
+				_end_data = a_data[data_len - 1];
+				_mm_inc = _end_data - _mid_data;
+				if (_mm_inc > a_data[0] / 10) { //后半部分还增长，并超过程序(刚启动时的大小)的十分之一，就认为是泄露。
+					//_data.data_s[i]["leak"] = 1;
+					_leak_index_l.push(i);
+					
+				} else {
+					//_data.data_s[i]["leak"] = 0;
+				}
+			}
+			
+			return _leak_index_l;
+		}
+
+		//in data_legend, if have the same name will report "Uncaught TypeError: Cannot read property '__animators' of undefined" in console. 
+
+		_DATA_LIST = [{
+						mmm_name : "mmm", 
+						data_legend : data_legend_mmm,
+						uptime : data_uptime_mmm,
+						data_s : data_s_mmm,
+						show_l : mmm_dis_ps,   //画线
+						init_l : mmmInitDisPs, //每个数据大项的初始化和显示初始化。
+					  },
+					  {
+						mmm_name : "mmmi", 
+						data_legend : data_legend_mmmi,
+						uptime : data_uptime_mmmi,
+						data_s : data_s_mmmi,
+						show_l : mmm_dis_ps,
+						init_l : mmmInitDisMi,
+					  },
+					  
+					  {
+						mmm_name : "slabi", 
+						data_legend : data_legend_slabi,
+						uptime : data_uptime_slabi,
+						data_s : data_s_slabi,
+						show_l : mmm_dis_ps,
+						init_l : mmmInitDisSlabi,
+					  },
+
+					 ];
+		
+		$(document).ready(function(){
+			for (var _id = 0; _id < _DATA_LIST.length; _id++) {
+				_DATA_LIST[_id].init_l();
+
+			}
+			$("li").click(function(){
+				apid = $(this).attr("_index");
+				it_name = $(this).attr("_it_name");
+				var _DATA;
+				for (_id = 0; _id < _DATA_LIST.length; _id++) {
+					if (_DATA_LIST[_id].mmm_name == it_name) {
+						_DATA = _DATA_LIST[_id];
+					}
+				}
+				_DATA.show_l(apid);	
+			});
+			var xData = 1000;
+			$("#add_data").click(function(){
+				//alert("hello" + g_chat);
+				c_op = g_chat.getOption();	
+				g_chat.addData([
+					[
+			            0,        // 系列索引
+			            Math.round(Math.random() * 1000), // 新增数据
+			            false,     // 新增数据是否从队列头部插入
+			            true,    // 是否增加队列长度，false则自定删除原有数据，队头插入删队尾，队尾插入删队头
+			            xData,
+		            ],
+	            ]);
+	            xData = xData + 1;
+			});
+		});
+
+	//let like-laek red background
+	function red_leak_link (_it_index_l, _data) {
+		for (var lki = 0; lki < _it_index_l.length; lki++) {
+			$('#'+_data.data_s[_it_index_l[lki]].name).attr("class","red_link");
+		}
+		
+		//$('#dms_monitor').attr("class","red_link");
+	}
+
+	function mmmInitDisPs() {
+		ref_list = gen_ref_list(this.data_legend, this.mmm_name);
+		$('#list').html(ref_list);
+		this.show_l(82730200);
+	}
+	function mmmInitDisMi() {
+		mi_ref_list = gen_ref_list(this.data_legend, this.mmm_name);
+		$('#mi_list').html(mi_ref_list);
+		this.show_l(82730200);
+	}
+	function mmmInitDisSlabi() {
+		si_ref_list = gen_ref_list(this.data_legend, this.mmm_name);
+	 	$('#si_list').html(si_ref_list);
+		this.show_l(82730200);
+	}
+
+	function mmm_dis_ps(_apID) {
+		// in var _it_index_l, define which items to display
+		if (_apID == 82730100) { //dis all process
+			_it_index_l = [];
+			for (var iti = 0; iti < this.data_s.length; iti++) {
+				_it_index_l.push(iti);
+			}
+		} else if (_apID == 82730200) { //dis like-leak process items
+			_it_index_l = find_leak_p(this);
+			if (_it_index_l.length == 0) {
+				this.show_l(82730100);
+				return;
+			}
+			red_leak_link(_it_index_l, this);
+		} else {
+			_it_index_l = [_apID,];
+		}
+				
+		mmm_dis_chart(_it_index_l, this.data_legend, this.uptime, this.data_s);
+	}
+		
+	// 路径配置
+	require.config({
+		paths: {
+			echarts: 'build/dist'
+		}
+	});
+	
+	function mmm_dis_chart(_it_index_l, _legend_mmm, _uptime, _data_s) {
+		// 使用
+		require(
+			[
+				'echarts',
+				'echarts/chart/line' // 使用柱状图就加载bar模块，按需加载
+			],
+			
+			function (ec) {
+				// 基于准备好的dom，初始化echarts图表
+				
+				var myChart = ec.init(document.getElementById('mmmo')); 
+				
+				option = {
+					tooltip : {
+						trigger: 'axis'
+					},
+					legend: {
+						data : (function(){
+								
+								var data_legend = [];
+								for(var ii = 0; ii < _it_index_l.length; ii++){
+									data_legend.push(_legend_mmm[_it_index_l[ii]]);
+								}
+								return data_legend;
+							})()
+					},
+					toolbox: {
+						show : true,
+						orient: 'horizontal',      // 布局方式，默认为水平布局，可选为：
+												   // 'horizontal' ¦ 'vertical'
+						x: 'right',                // 水平安放位置，默认为全图右对齐，可选为：
+												   // 'center' ¦ 'left' ¦ 'right'
+												   // ¦ {number}（x坐标，单位px）
+						y: 'top',                  // 垂直安放位置，默认为全图顶端，可选为：
+												   // 'top' ¦ 'bottom' ¦ 'center'
+												   // ¦ {number}（y坐标，单位px）
+						color : ['#1e90ff','#22bb22','#4b0082','#d2691e'],
+						backgroundColor: 'rgba(0,0,0,0)', // 工具箱背景颜色
+						borderColor: '#ccc',       // 工具箱边框颜色
+						borderWidth: 0,            // 工具箱边框线宽，单位px，默认为0（无边框）
+						padding: 5,                // 工具箱内边距，单位px，默认各方向内边距为5，
+						showTitle: true,
+						feature : {
+							mark : {
+								show : true,
+								title : {
+									mark : '辅助线-开关',
+									markUndo : '辅助线-删除',
+									markClear : '辅助线-清空'
+								},
+								lineStyle : {
+									width : 1,
+									color : '#1e90ff',
+									type : 'dashed'
+								}
+							},
+							dataZoom : {
+								show : true,
+								title : {
+									dataZoom : '区域缩放',
+									dataZoomReset : '区域缩放-后退'
+								}
+							},
+							dataView : {
+								show : true,
+								title : '数据视图',
+								readOnly: true,
+								lang : ['数据视图', '关闭', '刷新'],
+								optionToContent: function(opt) {
+									var axisData = opt.xAxis[0].data;
+									var series = opt.series;
+									var table = '<table style="width:100%;text-align:center"><tbody><tr>'
+												 + '<td>时间</td>'
+												 + '<td>' + series[0].name + '</td>'
+												 + '<td>' + series[1].name + '</td>'
+												 + '</tr>';
+									for (var i = 0, l = axisData.length; i < l; i++) {
+										table += '<tr>'
+												 + '<td>' + axisData[i] + '</td>'
+												 + '<td>' + series[0].data[i] + '</td>'
+												 + '<td>' + series[1].data[i] + '</td>'
+												 + '</tr>';
+									}
+									table += '</tbody></table>';
+									return table;
+								}
+							},
+							magicType: {
+								show : true,
+								title : {
+									line : '动态类型切换-折线图',
+									bar : '动态类型切换-柱形图',
+									stack : '动态类型切换-堆积',
+									tiled : '动态类型切换-平铺'
+								},
+								type : ['line', 'bar', 'stack', 'tiled']
+							},
+							restore : {
+								show : true,
+								title : '还原',
+								color : 'black'
+							},
+							saveAsImage : {
+								show : true,
+								title : '保存为图片',
+								type : 'jpeg',
+								lang : ['点击本地保存'] 
+							}
+						}
+					},
+					calculable : true,
+					dataZoom : {
+						show : true,
+						realtime : true,
+						start : 20,
+						end : 100
+					},
+					xAxis : [
+						{
+							type : 'category',
+							boundaryGap : false,
+							data : _uptime
+						}
+					],
+					yAxis : [
+						{
+							type : 'value',
+							axisLabel : {
+								formatter: '{value} KB'
+							}
+						}
+					],
+					series : (function(){
+								var data_data = [];
+								//alert("id = " + _it_index_l[0] + "it_len = " + _it_index_l.length);
+								for(var iid = 0; iid < _it_index_l.length; iid++){
+									data_data.push(_data_s[_it_index_l[iid]]);
+								}
+								
+								return data_data;
+							})()
+				};
+				myChart.setOption(option);
+				g_chat = myChart;
+			}
+		);
+	}
+		
+	</script>
+<style type="text/css">
+.red_link {
+	background-color: #FFF;
+	color: #903;
+	font-weight: bolder;
+}
+
+#mmmo_fm #mmmo {
+	height: 400px;
+}
+#mmmlist {
+	float: left;
+	width: 100%
+}
+.amlist {
+	float: left;
+	height: 300px;
+	border: 1px solid #903;
+	width: 200px;
+	display: block;
+	overflow:scroll; /*任何时候都强制显示滚动条*/
+	overflow:auto; /*需要的时候会出现滚动条*/
+	overflow-x:auto; /*控制X方向的滚动条*/
+	overflow-y:auto; /*控制Y方向的滚动条*/
+}
+.list_ul {
+
+}
+.list_li {
+	list-style:none;
+	width:100px;
+}
+.list_title {
+	float: left;
+	height: 40px;
+	width: 200px;
+	border: 1px solid #903;
+	text-align: center;
+	vertical-align: middle;
+	font-size: 22px;
+}
+#list_title_box {
+	width: 100%;
+	height: 40px;
+}
+</style>
+
+</head>
+<body>
+	<!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+	<div id = "mmmo_fm">
+		<div id="mmmo" ></div>
+	</div>
+    <div id = "list_title_box">
+		<div id="l_title" class="list_title">ps</div>
+		<div id="mi_l_title" class="list_title">meminfo</div>
+		<div id="si_l_title" class="list_title">slabinfo</div> 
+	</div>
+	<div id = "mmmlist">
+		<div id="list" class="amlist"></div>
+		<div id="mi_list" class="amlist"></div>
+		<div id="si_list" class="amlist"></div> 
+	</div>
+	<div id="bt">
+		<button id="add_data">add data</button>
+	</div>
+</body>
+</html>

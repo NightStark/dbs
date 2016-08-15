@@ -1,0 +1,134 @@
+  <!DOCTYPE HTML>
+  <html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>配置控制页面</title>
+  <style type="text/css">
+  body,td,th {
+      font-size: 12px;
+      font-family:"新宋体";
+      background-color: #FFF;
+  }
+  img{ border:0;}
+  ul ,li{ margin:0; padding:0; list-style:none;}
+  ul.table_cs_list_heaed{
+	height:30px;
+	clear:both;
+	color: #000;
+	background-color: #FFF;
+}
+  ul.table_cs_list_heaed li{
+	background:#999;
+	float:left;
+	border-right:1px #fff solid;
+	line-height:30px;
+	text-align:center;
+	font-weight:bold;
+	color: #000;
+}
+  ul.table_cs_list_elment{
+	height:30px;
+	clear:both;
+	color: #000;
+	background-color: #FFF;
+}
+  ul.table_cs_list_elment li{
+	background:#fff;
+	float:left;
+	line-height:30px;
+	text-align:center;
+	border-right-width: 1px;
+	border-right-style: solid;
+	border-right-color: #666;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #666;
+}
+  .cs_no{ width:50px;}
+  .cs_func{ width:150px;}
+  .cs_status{ width:200px;}
+  .cs_value{width:200px;}
+  .name4{ width:100px; text-align:left; }
+  ul.table_cs_list_heaed li.name4{ width:100px; text-align:left; }
+  ul.table_cs_list_heaed li .taxis{ float:right; margin-right:5px; width:12px; text-align:right; margin-top:8px; _margin-top:4px; vertical-align:middle;}
+  ul.table_cs_list_heaed li .taxis_title{ float:left; margin-left:5px; text-align:left; }
+  .liter{ margin:0;margin-bottom:4px;_margin-bottom:-2px;}
+  .drop{ margin:0;}
+  
+  .table_left{ width:30%; overflow:hidden; float:left;}
+  .table_right{ width:70%; overflow:hidden; float:right;}
+  .table_left div{ background:#ececd8;margin-right:1px;margin-bottom:1px; text-align:right; padding:3px 5px;}
+  .table_right div{ background:#eee; margin-bottom:1px; padding:3px 5px;}
+  .table_height_30{ height:30px; line-height:30px;_line-height:25px; }
+  .table_height_100{ height:100px; display:block; }
+  .table_height_100_left{ height:100px; line-height:100px; }
+  .set_value{
+      float:left;
+      margin: 0px;
+      border-top-style: solid;
+      border-right-style: solid;
+      border-bottom-style: solid;
+      border-left-style: solid;
+      border-top-width: 0px;
+      border-right-width: 0px;
+      border-bottom-width: 0px;
+      border-left-width: 0px;
+      padding-top: 0px;
+      padding-right: 0px;
+      padding-bottom: 0px;
+      padding-left: 20px;
+  }
+  
+  .table_height_301 {height:30px; line-height:30px;_line-height:25px; }
+  .c_trig{
+	float:left;
+	padding-left: 10px;
+	text-decoration: underline;
+}
+.c_trig_b{
+	height:25px;
+	line-height:20px;
+	line-height:20px;
+}
+  </style>
+  
+  </head>
+  <script src="jquery.js">
+    </script>
+  <script>
+		$(document).ready(function(){
+			$("#cs_n_1_1").click(function(){
+				htmlobj=$.ajax({url:"3",async:false});
+				$("#cs_status").html(htmlobj.responseText);				
+			});
+			
+			$("#cs_n_1_0").click(function(){
+				htmlobj=$.ajax({url:"4",async:false});
+				$("#cs_status").html(htmlobj.responseText);				
+			});
+		})
+    </script>
+  <body onLoad="">
+  <h3>配置-控制 页面</h3>
+<ul class="table_cs_list_heaed">
+      <li class="cs_no">NO.</li>
+      <li class="cs_func">功能项</li>
+      <li class="cs_status">当前状态</li>
+      <li class="cs_value">配置</li>
+  </ul>
+   <ul class="table_cs_list_elment">
+      <li id="cs_no" class="cs_no">131078</li>
+      <li id ="cs_func" class="cs_func">连接数据库</li>
+      <li id="cs_status" class="cs_status">已经连接</li>
+      <li id="cs_value" class="cs_value">
+      		<div class="c_trig">
+            	<button class="c_trig_b" id="cs_n_1_1" value="1" type="button">连接</button> </div>
+      		<div class="c_trig">
+            	<button class="c_trig_b" id="cs_n_1_0" value="0" type="button">断开</button></div>
+      </li>
+  </ul> <div id="para_list">
+
+  </div>
+
+  </body>
+  </html>

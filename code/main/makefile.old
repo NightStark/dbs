@@ -1,0 +1,25 @@
+OBJS = main.o
+OBJS += ../public/dataop/opdata.o
+OBJS += ../public/include/string.o
+OBJS += ../web/socket.o
+OBJS += ../web/web_ProcReq.o
+bin:$(OBJS)
+	gcc $(OBJS) -o bin -pthread
+main.o:
+	gcc -c main.c -g
+../public/dataop/opdata.o:
+	cd ../public/dataop;\
+		gcc -c opdata.c -g;
+../public/include/string.o:
+	cd ../public/include;\
+		gcc -c string.c -g;
+../web/socket.o:
+	cd ../web;\
+		gcc -c socket.c
+../web/web_ProcReq.o:
+	cd ../web;\
+		gcc -c web_ProcReq.c
+
+clean:
+	-rm bin
+	-rm $(OBJS)

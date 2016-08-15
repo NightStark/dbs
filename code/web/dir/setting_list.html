@@ -1,0 +1,86 @@
+  <!DOCTYPE HTML>
+  <html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>服务配置</title>
+  <style type="text/css">
+  body,td,th {
+      font-size: 12px;
+      font-family:"新宋体";
+      background-color: #FFF;
+  }
+  img{ border:0;}
+  ul ,li{ margin:0; padding:0; list-style:none;}
+  ul.table_set_list_heaed{ height:30px; border-bottom:1px solid #fff; clear:both;}
+  ul.table_set_list_heaed li{ background:#999;float:left; border-right:1px #fff solid; line-height:30px; text-align:center; font-weight:bold;}
+  ul.table_set_list_elment{ height:30px; border-bottom:1px solid #fff; clear:both;}
+  ul.table_set_list_elment li{ background:#ccc;float:left; border-right:1px #fff solid; line-height:30px; text-align:center;}
+  .name_no{ width:50px;}
+  .name_para{ width:150px;}
+  .name_value{ width:350px;}
+  .name4{ width:100px; text-align:left; }
+  ul.table_set_list_heaed li.name4{ width:100px; text-align:left; }
+  ul.table_set_list_heaed li .taxis{ float:right; margin-right:5px; width:12px; text-align:right; margin-top:8px; _margin-top:4px; vertical-align:middle;}
+  ul.table_set_list_heaed li .taxis_title{ float:left; margin-left:5px; text-align:left; }
+  .liter{ margin:0;margin-bottom:4px;_margin-bottom:-2px;}
+  .drop{ margin:0;}
+  
+  .table_left{ width:30%; overflow:hidden; float:left;}
+  .table_right{ width:70%; overflow:hidden; float:right;}
+  .table_left div{ background:#ececd8;margin-right:1px;margin-bottom:1px; text-align:right; padding:3px 5px;}
+  .table_right div{ background:#eee; margin-bottom:1px; padding:3px 5px;}
+  .table_height_30{ height:30px; line-height:30px;_line-height:25px; }
+  .table_height_100{ height:100px; display:block; }
+  .table_height_100_left{ height:100px; line-height:100px; }
+  .set_value{
+      float:left;
+      margin: 0px;
+      border-top-style: solid;
+      border-right-style: solid;
+      border-bottom-style: solid;
+      border-left-style: solid;
+      border-top-width: 0px;
+      border-right-width: 0px;
+      border-bottom-width: 0px;
+      border-left-width: 0px;
+      padding-top: 0px;
+      padding-right: 0px;
+      padding-bottom: 0px;
+      padding-left: 20px;
+  }
+  
+  
+  
+  .table_height_301 {height:30px; line-height:30px;_line-height:25px; }
+  </style>
+  
+  </head>
+	<script src="jquery.js">
+    </script>
+    <script>
+		$(document).ready(function(){
+			$('#para_list').load('1');
+			$("#btn1").click(function(){
+				$('#para_list').load('1');
+			})
+			$("#btn2").click(function(){
+				htmlobj=$.ajax({url:"index.html",async:false});
+				$("#para_list").html(htmlobj.responseText);			
+			})
+		})
+    </script>
+  <body onLoad="">
+  <h3>简单的表格列表</h3>
+  <ul class="table_set_list_heaed">
+      <li class="name_no">NO.</li>
+      <li class="name_para">参数</li>
+      <li class="name_value">设置</li>
+  </ul>
+  <div id="para_list">
+  
+  </div>
+<button id="btn1" type="button">获得外部的内容</button> 
+<button id="btn2" type="button">reload</button>  
+  
+  </body>
+  </html>

@@ -1,0 +1,62 @@
+
+#所有需要的obj文件
+#OBJS = main.o
+#OBJS += ../public/dataop/opdata.o
+#OBJS += ../public/include/string.o
+#OBJS += ../web/socket.o
+#OBJS += ../web/web_ProcReq.o
+
+#bin需要的obj
+bin_OBJS =  main.o
+bin_OBJS += ../public/include/string.o
+bin_OBJS += ../public/dataop/list.o
+bin_OBJS += ../public/dataop/table_type.o
+bin_OBJS += ../public/dataop/opdata.o
+bin_OBJS += ../public/dataop/nsdb.o
+
+#web需要的obj
+web_OBJS = ../web/socket.o
+web_OBJS += ../web/web_ProcReq.o
+web_OBJS += ../public/include/string.o
+
+#通过目标$(OBJS)先把说有的OBJ变出来
+target:before bin web 
+
+before:
+	clear;\
+	make clean
+
+bin:$(bin_OBJS)
+	gcc $(bin_OBJS) -o bin -pthread
+web:$(web_OBJS)
+	gcc $(web_OBJS) -o ../web/web -pthread
+
+
+main.o:
+	gcc -c main.c -g
+../public/dataop/list.o:
+	cd ../public/dataop;\
+		gcc -c list.c -g;
+../public/dataop/opdata.o:
+	cd ../public/dataop;\
+		gcc -c opdata.c -g;
+../public/dataop/table_type.o:
+	cd ../public/dataop;\
+		gcc -c table_type.c -g;
+../public/dataop/nsdb.o:
+	cd ../public/dataop;\
+		gcc -c nsdb.c -g;
+../public/include/string.o:
+	cd ../public/include;\
+		gcc -c string.c -g;
+
+../web/socket.o:
+	cd ../web;\
+		gcc -c socket.c -g
+../web/web_ProcReq.o:
+	cd ../web;\
+		gcc -c web_ProcReq.c -g
+
+clean:
+	-rm bin
+	-rm $(bin_OBJS) $(web_OBJS)

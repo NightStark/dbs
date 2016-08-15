@@ -1,0 +1,3 @@
+DIR_APP_NSLOG = $(DIR_APP)/nslog
+
+SRC_APP_NSLOG += $(DIR_APP_NSLOG)/ns_log.c
