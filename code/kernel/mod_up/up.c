@@ -21,8 +21,13 @@
 #include <linux/if_pppox.h>
 #include <linux/ppp_defs.h>
 #include <net/genetlink.h>
+#include <linux/version.h>
 
 #include "up.h"
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,36)
+#define OLD_VER
+#endif
 
 static unsigned int g_up_pid = 0;
 
@@ -58,7 +63,7 @@ struct nla_policy up_policy[UP_ATTR_MAX + 1] = {
 };
 
 //TEST:
-int up_report_data(struct sk_buff *skb, struct genl_info *info);
+int up_report_data(void);
 
 static int
 up_set_pid(struct sk_buff *skb, struct genl_info *info)
@@ -92,11 +97,11 @@ static struct genl_ops g_up_nl_ops[] = {
     UP_OP(UP_OPS_REPORT_PID, up_set_pid), /* set pid of user process */
 };
 
-int up_report_data(struct sk_buff *skb, struct genl_info *info)
+int up_report_data(void)
 {
     int err = 0;
     void *hdr = NULL;
-    //struct sk_buff *skb = NULL;
+    struct sk_buff *skb = NULL;
 
     if (g_up_pid == 0) {
         UP_MSG_PRINTF("up pid is still invalid.");
@@ -123,7 +128,7 @@ int up_report_data(struct sk_buff *skb, struct genl_info *info)
 #ifdef OLD_VER
     err = genlmsg_unicast(skb, g_up_pid);
 #else
-    err = genlmsg_unicast(genl_info_net(info), skb, g_up_pid);
+    err = genlmsg_unicast(&init_net, skb, g_up_pid);
 #endif
     if (err != 0) {
         UP_MSG_PRINTF("ge nl msg unicast failed.");
@@ -613,6 +618,7 @@ static unsigned int up_ct_http_hook_cb(unsigned int hooknum,
             return NF_ACCEPT;                       
         }                                           
 
+        //up_report_data();
         //UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
         if (sport == 80 || dport == 80) {
             UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
