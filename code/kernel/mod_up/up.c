@@ -330,6 +330,17 @@ static inline int _get_http_header_filed(const char *str,
     return 0;
 }
 
+/* find @str in pstA2B
+ * */
+static inline char * __A2B_strstr(STR_A2B_INFO_ST *pstA2B, const char *str)
+{
+    char *p = NULL;
+
+    p  = __strstr2(pstA2B->posA, str, pstA2B->A2BLen);
+
+    return p;
+}
+
 #define HTTP_RESP_CONTENT_TYPE "Content-Type"
 
 /* find @key in @data
@@ -479,8 +490,8 @@ up_ct_http_response(char *data, int data_len)
     snprintf(buf, (stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : stA2B.A2BLen + 1), 
             "%s", buf);
     UP_MSG_PRINTF(HTTP_RESP_CONTENT_TYPE":%s", buf);
-    p  = __strstr2(p, "text/html", len);
-    p1 = __strstr2(p, "application/x-javascript", len);
+    p  = __A2B_strstr(&stA2B, "text/html");
+    p1 = __A2B_strstr(&stA2B, "application/x-javascript");
     if (p != NULL && p1 != NULL) {
         /* inject */
         return up_ct_http_response_inject(data, data_len);
