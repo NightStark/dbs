@@ -14,6 +14,9 @@ TARGET_MAIN 	  = Server
 #客户端执行文件名				
 TARGET_NSDB_C  	  = Client
 
+TARGET_MOD_UP     = mod-up
+TARGET_MOD_UP_CLEAN     = mod-up-clean
+
 ifeq ($(TEST), ON)
 	#测试程序执行文件名				
 	TARGET_NSDB_TEST  = Test
@@ -178,6 +181,11 @@ $(TARGET_DEBUG_MAIN):$(OBJ_DEBUG_MAIN) $(TARGET_DEBUG_SO_FILE) $(TARGET_SO_FILE)
 $(TARGET_APP_NS_LOG):$(TARGET_SO_FILE) $(OBJ_APP_NS_LOG)
 	@echo --$(TARGET_SO_NAME) --$(OBJ_APP_NS_LOG) --$(SRC_APP_NSLOG)
 	$(CC) $(OBJ_APP_NS_LOG) -l$(TARGET_SO_NAME) -L. -o $(TARGET_APP_NS_LOG) $(CFLAGS)
+#################################################
+$(TARGET_MOD_UP):
+	make -C kernel
+$(TARGET_MOD_UP_CLEAN):
+	make -C kernel clean
 #################################################
 	
 %.o:%.c 

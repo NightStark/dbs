@@ -1,7 +1,7 @@
 MODNAME = mod-up
 
 obj-m := $(MODNAME).o
-$(MODNAME)-objs = up.o
+$(MODNAME)-objs = up.o up_sysfs.o
 
 #ARCH := mips                           
 #CC=mips-linux-gcc

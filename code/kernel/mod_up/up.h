@@ -1,5 +1,4 @@
 
-
 #define UP_MSG_PRINTF(fmt, ...) \
     printk("[%s][%d]", __func__, __LINE__); \
     printk(fmt, ##__VA_ARGS__); \
@@ -28,3 +27,11 @@ enum {
     __UP_OPS_MAX,
 };
 #define UP_OPS_MAX (__UP_OPS_MAX - 1)
+
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,36)
+#define OLD_VER
+#endif
+
+int up_sysfs_init(void);
+void up_sysfs_fini(void);

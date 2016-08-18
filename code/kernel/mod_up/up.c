@@ -21,13 +21,8 @@
 #include <linux/if_pppox.h>
 #include <linux/ppp_defs.h>
 #include <net/genetlink.h>
-#include <linux/version.h>
 
 #include "up.h"
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,36)
-#define OLD_VER
-#endif
 
 static unsigned int g_up_pid = 0;
 
@@ -650,100 +645,13 @@ static struct nf_hook_ops up_hooks[] = {
     },
 };
 
-
-
-#define SYSFS_UP_ATTR "parameters"
-typedef struct up_config
-{
-    unsigned char up_enable;
-    spinlock_t up_lock/* = SPIN_LOCK_UNLOCKED*/;
-}up_config_t;
-
-static up_config_t g_up_config;
-
-#define UP_CONFIG_LOCK \
-    spin_lock(&(g_up_config.up_lock));
-#define UP_CONFIG_UNLOCK \
-    spin_unlock(&(g_up_config.up_lock));
- 
-static ssize_t 
-show_up_enable(struct kobject *kobj, struct kobj_attribute *attr,
-        char *buf)
-{
-    int rc = -1;
-    UP_CONFIG_LOCK;
-    rc = sprintf(buf, "%d\n", g_up_config.up_enable);
-    UP_CONFIG_UNLOCK;
-    return rc;
-}
-
-static ssize_t
-store_up_enable(struct kobject *kobj, struct kobj_attribute *attr,
-			  const char *buf, size_t count)
-{
-    int rc = -1, rv = 0;;
-    rc = sscanf(buf, "%d\n", &rv);
-    UP_CONFIG_LOCK;
-    if (rc == 1) {
-        if(rv)
-            g_up_config.up_enable = 1;
-        else
-            g_up_config.up_enable = 0;
-    }
-    UP_CONFIG_UNLOCK;
-    return strlen(buf);
-}
-
-#define UP_SYSFS_ATTR_SET(_name, _mode, _show, _store) \
-        struct kobj_attribute up_sysfs_attr_##_name = __ATTR(_name, _mode, _show, _store)
-static UP_SYSFS_ATTR_SET(up_enable, 
-        (S_IRUGO | S_IWUSR),
-        show_up_enable, 
-        store_up_enable);
-
-static struct attribute *up_attrs[] = {
-    &(up_sysfs_attr_up_enable.attr),
-    NULL,
-};
-
-static struct attribute_group up_sysfs_group = {
-    .name = SYSFS_UP_ATTR,
-    .attrs = up_attrs,
-};
-
-static int up_create_sysfs(void)
-{
-	struct kobject *up_obj = &(THIS_MODULE->mkobj.kobj);
-
-    if (NULL == up_obj) {
-        printk("[%s][%d]up obj is null\n", __func__, __LINE__);
-        return -1;
-    }
-
-    sysfs_create_group(up_obj, &up_sysfs_group);
-
-    return 0;
-}
-
-static int up_destroy_sysfs(struct kobject *up_obj)
-{
-    if (NULL == up_obj) {
-        printk("[%s][%d]up obj is null\n", __func__, __LINE__);
-    }
-
-    sysfs_remove_group(up_obj, &up_sysfs_group);
-
-    return 0;
-}
-
-
 static int __init up_init(void)
 {
     int err = 0;
     up_link_init();
     UP_MSG_PRINTF("up link init success.");
 
-    if (up_create_sysfs() < 0) {
+    if (up_sysfs_init() < 0) {
         UP_MSG_PRINTF("%s: faild to create sysfs.\n", __func__);
         return -1;
     }
@@ -756,8 +664,6 @@ static int __init up_init(void)
     UP_MSG_PRINTF("nf register hooks success.");
     //up_report_data();
     
-    memset(&g_up_config, 0, sizeof(up_config_t));
-	spin_lock_init(&(g_up_config.up_lock));
     UP_MSG_PRINTF("init success.");
 
     return 0;
@@ -765,9 +671,9 @@ static int __init up_init(void)
 
 static void __exit up_exit(void)
 {
-	struct kobject *up_obj = &(THIS_MODULE->mkobj.kobj);
+
     nf_unregister_hooks(up_hooks, ARRAY_SIZE(up_hooks));
-    up_destroy_sysfs(up_obj);
+    up_sysfs_fini();
     up_link_fini();
 
     UP_MSG_PRINTF("exit success.");
