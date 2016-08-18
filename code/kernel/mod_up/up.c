@@ -1,12 +1,9 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <linux/string.h>
-#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/mm.h>
 #include <linux/vmalloc.h>
-#include <linux/interrupt.h>
 #include <linux/mutex.h>
 
 #include <linux/time.h>
@@ -15,21 +12,17 @@
 #include <linux/random.h>
 #include <linux/netfilter_bridge.h>
 #include <linux/kernel.h>
+#include <net/genetlink.h>
 #include <linux/netlink.h>
 #include <net/ip.h>
 #include <linux/inetdevice.h>
 #include <net/netfilter/nf_conntrack_core.h>
-#include <net/genetlink.h>
 #include <linux/if_ether.h>
 #include <linux/if_pppox.h>
 #include <linux/ppp_defs.h>
+#include <net/genetlink.h>
 
 #include "up.h"
-
-MODULE_AUTHOR("G");
-MODULE_VERSION("V0.1");
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("up  .  module");
 
 static unsigned int g_up_pid = 0;
 
@@ -151,8 +144,9 @@ put_err:
 
 static int up_link_init(void)
 {
-    int i = 0;
     int err = -1;
+#ifdef OLD_VER
+    int i = 0;
 
     err = genl_register_family(&g_up_nl_family);
     if (err != 0) {
@@ -163,14 +157,19 @@ static int up_link_init(void)
     }
 
     for (i = 0; i < ARRAY_SIZE(g_up_nl_ops); i++) {
-#ifdef OLD_VER
         err = genl_register_ops(&g_up_nl_family, &(g_up_nl_ops[i]));
-#endif
         if (err != 0) {
             UP_MSG_PRINTF("genl register ops failed.");
             goto reg_ops_err;
         }
     }
+#else
+	err = genl_register_family_with_ops(&g_up_nl_family, g_up_nl_ops);
+    if (err != 0) {
+        UP_MSG_PRINTF("genl register ops failed.");
+        goto reg_ops_err;
+    }
+#endif
     UP_MSG_PRINTF("genl register ops success.");
     
     return 0;
@@ -526,14 +525,15 @@ up_ct_http_get_url(char *data, int data_len)
     return 0;
 }
 
-unsigned int up_ct_http_hook_cb(unsigned int hooknum,
+//static nf_hookfn *up_ct_http_hook_cb;
+
+static unsigned int up_ct_http_hook_cb(unsigned int hooknum,
         struct sk_buff *skb,
         const struct net_device *in,
         const struct net_device *out,
-        int (*okfn)(struct sk_buff *));
-
+        int (*okfn)(struct sk_buff *))
 {
-    char buf[1024];
+    char buf[512];
 	struct ethhdr  *eh = NULL;
 	struct iphdr   *ih = NULL;
 	struct tcphdr  *th = NULL;
@@ -582,7 +582,7 @@ unsigned int up_ct_http_hook_cb(unsigned int hooknum,
     }
     */
 
-    //if (ctinfo == IP_CT_ESTABLISHED) {
+    // if (ctinfo == IP_CT_ESTABLISHED) 
     {
         //UP_MSG_PRINTF("----");
         /*
@@ -614,8 +614,7 @@ unsigned int up_ct_http_hook_cb(unsigned int hooknum,
         }                                           
 
         //UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
-        //if (dport == 80 || sport == 80) {
-        if (sport == 80) {
+        if (sport == 80 || dport == 80) {
             UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
             _ip2str(dst_ip, buf, sizeof(buf));
             UP_MSG_PRINTF("dip:%s", buf);
@@ -640,7 +639,8 @@ static struct nf_hook_ops up_hooks[] = {
         .hooknum  = NF_INET_POST_ROUTING,
         .pf       = PF_INET,
         .priority = NF_IP_PRI_FIRST,
-        .hook     = up_ct_http_hook_cb,
+        .hook     = (nf_hookfn *)up_ct_http_hook_cb,
+        //.hook     = up_ct_http_hook_cb,
     },
 };
 
@@ -770,3 +770,9 @@ static void __exit up_exit(void)
 
 module_init(up_init);
 module_exit(up_exit);
+
+MODULE_AUTHOR("G");
+MODULE_VERSION("V0.1");
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("up-module");
+

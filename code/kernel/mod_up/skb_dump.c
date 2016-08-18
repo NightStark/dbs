@@ -1,3 +1,32 @@
+#include <asm/io.h>
+#include <asm/irq.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/mm.h>
+#include <linux/vmalloc.h>
+#include <linux/interrupt.h>
+#include <linux/mutex.h>
+
+#include <linux/time.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
+#include <linux/random.h>
+#include <linux/netfilter_bridge.h>
+#include <linux/kernel.h>
+#include <linux/netlink.h>
+#include <net/ip.h>
+#include <linux/inetdevice.h>
+#include <net/netfilter/nf_conntrack_core.h>
+#include <net/genetlink.h>
+#include <linux/if_ether.h>
+#include <linux/if_pppox.h>
+#include <linux/ppp_defs.h>
+#include <net/genetlink.h>
+
+#include "up.h"
+
 //80383024
 //8033ef0c <cache_chain_mutex>:
 //static DEFINE_MUTEX(cache_chain_mutex);
