@@ -275,6 +275,7 @@ static inline const char * __get_msg_of_ltgt(const char *tt, int tt_len, char *b
     return __get_msg_of_A2B(tt, tt_len, buf, buf_len, "<", ">");
 }
 
+
 typedef struct tag_strA2Binfo
 {
     const char *strA;
@@ -283,6 +284,12 @@ typedef struct tag_strA2Binfo
     const char *posB;
     int A2BLen; /* exclude '\0' */
 }STR_A2B_INFO_ST;
+
+typedef struct tag_http_field_node
+{
+    struct list_head stNode;
+    STR_A2B_INFO_ST stA2B;
+}HTTP_FIELD_NODE_ST;
 
 /*
  * */
@@ -355,7 +362,7 @@ static inline char * __A2B_strstr(STR_A2B_INFO_ST *pstA2B, const char *str)
  *    *key_len = b - a;
  *    return a;
  * */
-static char *
+char *
 up_ct_http_check_key(char *data, int data_len, const char *key, int *key_len)
 {
     char *p = NULL, *p1 = NULL;
@@ -388,6 +395,71 @@ up_ct_http_check_key(char *data, int data_len, const char *key, int *key_len)
     return p;
 }
 
+static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len, 
+        int need_len, struct list_head *http_field_list_head)
+{
+    int dig_len = 0;
+    STR_A2B_INFO_ST stA2B;
+    HTTP_FIELD_NODE_ST *pstHttpField = NULL, *n = NULL;
+
+    memset(&stA2B, 0, sizeof(stA2B));
+
+    //TODO:can for a loop
+    if (0 == _get_http_header_filed(http_hdr, http_hdr_len, "Last-Modified", &stA2B)) {
+        dig_len += stA2B.A2BLen;
+        pstHttpField = vmalloc(sizeof(HTTP_FIELD_NODE_ST));
+        if (pstHttpField == NULL) {
+            UP_MSG_PRINTF("oom ...!");
+            goto err_oom;
+        }
+        memcpy(&(pstHttpField->stA2B), &stA2B, sizeof(pstHttpField->stA2B));
+        list_add_tail(&(pstHttpField->stNode), http_field_list_head);
+    }
+
+    if (dig_len >= need_len) {
+        return 1;
+    }
+
+
+    return 0;
+err_oom:
+    list_for_each_entry_safe(pstHttpField, n, http_field_list_head, stNode) {
+        list_del(&(pstHttpField->stNode));
+        kfree(pstHttpField);
+    }
+    pstHttpField = NULL;
+    n = NULL;
+    return -1;
+}
+
+/*
+ * |**************|****[fieldA][fieldB][fieldC]***********|**************************************|
+ * |<-TCP-Header->|<-----------HTTP-Header--------------->|<html><head>......</head>......</html>|
+ *                ^                                       ^            ^
+ *                |                    ^                  |            |
+ *                http_hdr             |                  http_data    inject_start(inject_end)
+ *                                     |                               |
+ * after inject                        |                               |
+ *                                     |-------------------------------| 
+ *                                                  /                  /\
+ *                                                 /                  /  \
+ *                                                /move              /    \
+ *                                               |        __________/      \____
+ *                                               V       /              dig     |
+ *                            |-----------------------| /                       |
+ *                            |                       |/                        | 
+ *                            V                       V                         V
+ * |**************|***[fieldA][fieldC]***|************|*************************|*************************|
+ * |<-TCP-Header->|<--------HTTP-Header--|<html><head><javascript> </javascript>......</head>......</html>|
+ *                ^                      ^            ^                         ^
+ *                |                      |            |<------inject data------>|
+ *                http_hdr                http_data    inject_start             inject_end
+ *
+ * note:
+ *      sizeof([fieldB]) >= (inject data length)
+ *
+ * */
+
 static int
 up_ct_http_response_inject(char * data, int data_len)
 {
@@ -395,13 +467,12 @@ up_ct_http_response_inject(char * data, int data_len)
     char *http_data     = NULL;
     int   http_data_len = 0;
     char *http_hdr      = NULL;
+    int   http_hdr_len  = 0;
     char js_str[128];
     char *inject_start  = NULL;
     char *inject_end    = NULL;
-    char *key_start     = NULL;
-    int   key_len       = 0;
-    char *key_end       = NULL;
-    
+    STR_A2B_INFO_ST *pstA2B = NULL;
+    struct list_head http_field_list;
 
     int js_str_len = 0;
 
@@ -417,11 +488,21 @@ up_ct_http_response_inject(char * data, int data_len)
         return -1;
     }
     http_data = p + 4; /* skip "\r\n\r\n" */
-    http_data_len = data_len - (http_data - http_hdr);
+    http_hdr_len = http_data - http_hdr;
+
+    http_data_len = data_len - http_hdr_len;
     if (http_data_len <= 0) {
         UP_MSG_PRINTF("no http data.");
         return -1;
     }
+
+    INIT_LIST_HEAD(&http_field_list);
+    if (__http_response_inject_check_room(http_hdr, http_hdr_len, js_str_len, &http_field_list)) {
+        UP_MSG_PRINTF("no enougth room for inject.");
+        return -1;
+    }
+
+    UP_MSG_PRINTF("room is enougth for inject. and start inject");
 
     /* get <head> in HTML */
     p = __strstr2(http_data, "<head>", http_data_len);
@@ -431,22 +512,7 @@ up_ct_http_response_inject(char * data, int data_len)
     }
     inject_start = inject_end = p + 6; /* skip "<head>" */
 
-    key_start = up_ct_http_check_key(data, data_len, "Last-Modified", &key_len);
-    if (NULL == key_start) {
-        UP_MSG_PRINTF("check failed.");
-        return -1;
-    }
-    UP_MSG_PRINTF("check key len : %d.", key_len);
-    key_end = key_start + key_len;
-
-    if (key_len < js_str_len) {
-        UP_MSG_PRINTF("keylen is not enougth.");
-        return -1;
-    }
-
-//xx
-
-    UP_MSG_PRINTF("keylen is enougth.");
+    /* start do inject */
 
     return 0;
 }
@@ -490,6 +556,8 @@ up_ct_http_response(char *data, int data_len)
     snprintf(buf, (stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : stA2B.A2BLen + 1), 
             "%s", buf);
     UP_MSG_PRINTF(HTTP_RESP_CONTENT_TYPE":%s", buf);
+
+    /* check if this is a noraml html file */
     p  = __A2B_strstr(&stA2B, "text/html");
     p1 = __A2B_strstr(&stA2B, "application/x-javascript");
     if (p != NULL && p1 != NULL) {
@@ -505,9 +573,6 @@ up_ct_http_response(char *data, int data_len)
 static int 
 up_ct_http_get_url(char *data, int data_len)
 {
-    //char buf[4096];
-    //char *b1 = NULL, *b2 = NULL, *b3 = NULL, *b4 = NULL;
-
     if (NULL == data) {
         return -1;
     }
@@ -520,18 +585,6 @@ up_ct_http_get_url(char *data, int data_len)
         UP_MSG_PRINTF("%s", "HTTP");
         up_ct_http_response(data, data_len);
     }
-
-    /*
-    b1 = __strstr2(data, "\r\n\r\n", data_len);
-    if (b1 != NULL) {
-        b1 += 4;
-
-        len = data_len - (b1 - data);
-
-        snprintf(buf, len >= 1024 ? 1024 : len, "%s", b1);
-        UP_MSG_PRINTF("len:%d\nC:[%s]", len, buf);
-    }
-    */
 
     return 0;
 }
@@ -626,7 +679,7 @@ static unsigned int up_ct_http_hook_cb(unsigned int hooknum,
 
         //up_report_data();
         //UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
-        if (sport == 80 || dport == 80) {
+        if (sport == 80 /* || dport == 80 */) {
             UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
             _ip2str(dst_ip, buf, sizeof(buf));
             UP_MSG_PRINTF("dip:%s", buf);
