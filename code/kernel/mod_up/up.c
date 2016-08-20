@@ -26,6 +26,51 @@
 
 static unsigned int g_up_pid = 0;
 
+static const char * g_http_header_field_list[] = 
+{
+    "Accept",
+    "Accept-Charset",
+    "Accept-Encoding",
+    "Accept-Language",
+    "Accept-Ranges",
+    "Age",
+    "Allow",
+    "Authorization",
+    "Cache-Control",
+    "Connection",
+    "Content-Encoding",
+    "Content-Language",
+    "Content-Length",
+    "Content-Location",
+    "Content-MD5",
+    "Content-Range",
+    "Content-Type",
+    "Date",
+    "ETag",
+    "Expect",
+    "Expires",
+    "From",
+    "Host",
+    "If-Match",
+    "If-Modified-Since",
+    "If-None-Match",
+    "If-Range",
+    "If-Unmodified-Since",
+    "Last-Modified",
+    "Location",
+    "Max-Forwards",
+    "Pragma",
+    "Proxy-Authenticate",
+    "Proxy-Authorization",
+    "Range",
+    "Referer",
+    "Retry-After",
+    "Server",
+    "TE",
+    "Trailer",
+    "",
+};
+
 /************** up-mode init *******************/
 struct genl_family g_up_nl_family = {
     .id         = GENL_ID_GENERATE,
@@ -304,7 +349,7 @@ static inline int __get_str_pos_of_A2B(const char *str, int strlen, STR_A2B_INFO
         return -1;
     }
 
-    posB = __strstr2(str, pstStrA2BInfo->strB, strlen);
+    posB = __strstr2(posA, pstStrA2BInfo->strB, strlen);
     if (posB == NULL) {
         return -1;
     }
@@ -313,6 +358,8 @@ static inline int __get_str_pos_of_A2B(const char *str, int strlen, STR_A2B_INFO
     pstStrA2BInfo->posB = posB;
 
     pstStrA2BInfo->A2BLen = posB - posA;
+    UP_MSG_PRINTF("A:%x,B:%x, len:%d", (unsigned int)posA,
+            (unsigned int)posB, (posB-posA));
 
     return 0;
 };
@@ -398,6 +445,7 @@ up_ct_http_check_key(char *data, int data_len, const char *key, int *key_len)
 static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len, 
         int need_len, struct list_head *http_field_list_head)
 {
+    int i = 0;
     int dig_len = 0;
     STR_A2B_INFO_ST stA2B;
     HTTP_FIELD_NODE_ST *pstHttpField = NULL, *n = NULL;
@@ -405,7 +453,9 @@ static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len,
     memset(&stA2B, 0, sizeof(stA2B));
 
     //TODO:can for a loop
-    if (0 == _get_http_header_filed(http_hdr, http_hdr_len, "Last-Modified", &stA2B)) {
+
+    for (i = 0; i < ARRAY_SIZE(g_http_header_field_list); i++)
+    if (0 == _get_http_header_filed(http_hdr, http_hdr_len, g_http_header_field_list[i], &stA2B)) {
         dig_len += stA2B.A2BLen;
         pstHttpField = vmalloc(sizeof(HTTP_FIELD_NODE_ST));
         if (pstHttpField == NULL) {
@@ -475,6 +525,7 @@ up_ct_http_response_inject(char * data, int data_len)
     struct list_head http_field_list;
 
     int js_str_len = 0;
+    int ret = 0;
 
     snprintf(js_str, sizeof(js_str), "%s", "<script async src=\"123.js\"></script>");
     js_str_len = strlen(js_str);
@@ -497,7 +548,16 @@ up_ct_http_response_inject(char * data, int data_len)
     }
 
     INIT_LIST_HEAD(&http_field_list);
-    if (__http_response_inject_check_room(http_hdr, http_hdr_len, js_str_len, &http_field_list)) {
+    js_str_len = 512;
+    ret = __http_response_inject_check_room(http_hdr, http_hdr_len, js_str_len, &http_field_list);
+     HTTP_FIELD_NODE_ST *pstS = NULL;
+    list_for_each_entry(pstS, &http_field_list, stNode) {
+        char buf[256];
+        snprintf(buf, (pstS->stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : pstS->stA2B.A2BLen + 1), 
+                "%s", pstS->stA2B.posA);
+        UP_MSG_PRINTF(":%s", buf);
+    }
+    if (ret) {
         UP_MSG_PRINTF("no enougth room for inject.");
         return -1;
     }
@@ -533,34 +593,15 @@ up_ct_http_response(char *data, int data_len)
         UP_MSG_PRINTF("can not find "HTTP_RESP_CONTENT_TYPE".");
         return -1;
     }
-    /*
-    p = __strstr2(data, HTTP_RESP_CONTENT_TYPE, len);
-    if (p == NULL) {
-        UP_MSG_PRINTF("can not find Accept.");
-        return -1;
-    }
 
-    len -= (p - data);
-    p1 = __strstr2(p, "\r\n", len);
-    if (p == NULL) {
-        UP_MSG_PRINTF("invalid Accept.");
-        return -1;
-    }
-    len = p1 - p;
-    p = __strstr2(p, "text/html", len);
-    if (p == NULL) {
-        UP_MSG_PRINTF("http is not text/html.");
-        return -1;
-    }
-    */
     snprintf(buf, (stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : stA2B.A2BLen + 1), 
-            "%s", buf);
-    UP_MSG_PRINTF(HTTP_RESP_CONTENT_TYPE":%s", buf);
+            "%s", stA2B.posA);
 
+    UP_MSG_PRINTF(":%s", buf);
     /* check if this is a noraml html file */
     p  = __A2B_strstr(&stA2B, "text/html");
     p1 = __A2B_strstr(&stA2B, "application/x-javascript");
-    if (p != NULL && p1 != NULL) {
+    if (p != NULL || p1 != NULL) {
         /* inject */
         return up_ct_http_response_inject(data, data_len);
     }

@@ -1,3 +1,5 @@
+#ifndef __UP_H__
+#define __UP_H__
 
 #define UP_MSG_PRINTF(fmt, ...) \
     printk("[%s][%d]", __func__, __LINE__); \
@@ -35,3 +37,5 @@ enum {
 
 int up_sysfs_init(void);
 void up_sysfs_fini(void);
+
+#endif //__UP_H__
