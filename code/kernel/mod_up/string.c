@@ -118,9 +118,9 @@ int __get_str_pos_of_A2B(const char *str, int strlen, STR_A2B_INFO_ST *pstStrA2B
  * @pstA2B: output, struct of header-field str
  * */
 int _get_http_header_filed(const char *str, 
-                                         int strlen, 
-                                         const char *hdr_filed, 
-                                         STR_A2B_INFO_ST *pstA2B)
+                           int strlen, 
+                           const char *hdr_filed, 
+                           STR_A2B_INFO_ST *pstA2B)
 {
     pstA2B->strA = hdr_filed;
     pstA2B->strB = "\r\n";
@@ -129,6 +129,10 @@ int _get_http_header_filed(const char *str,
 
         return -1;
     }
+
+    /* include "\r\n" */
+    pstA2B->posB   += 2;
+    pstA2B->A2BLen += 2;
 
     return 0;
 }

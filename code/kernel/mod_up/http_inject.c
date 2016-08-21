@@ -52,16 +52,32 @@ static const char * g_http_header_field_list[] =
     "Trailer",
 };
 
+static int __http_field_add_sort_by_addr (HTTP_FIELD_NODE_ST *pstHttpF, 
+                                          struct list_head *head)
+{
+    HTTP_FIELD_NODE_ST *pstN = NULL;
+
+    list_for_each_entry(pstN, head, stNode) {
+        if (pstN->stA2B.posA < pstHttpF->stA2B.posA) {
+            list_add(&(pstHttpF->stNode), (pstN->stNode.prev));
+            return 0;
+        }
+    }
+    list_add_tail(&(pstHttpF->stNode), head);
+    return 0;
+}
+
 static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len, 
         int need_len, struct list_head *http_field_list_head)
 {
-    int i = 0;
-    int dig_len = 0;
-    STR_A2B_INFO_ST stA2B;
+    int i                  = 0;
+    int dig_len            = 0;
     HTTP_FIELD_NODE_ST *pstHttpField = NULL, *n = NULL;
+    STR_A2B_INFO_ST stA2B;
 
     memset(&stA2B, 0, sizeof(stA2B));
 
+    UP_MSG_PRINTF("--------------");
     for (i = 0; i < ARRAY_SIZE(g_http_header_field_list); i++) {
         if (0 == _get_http_header_filed(http_hdr, http_hdr_len, g_http_header_field_list[i], &stA2B)) {
             dig_len += stA2B.A2BLen;
@@ -82,7 +98,11 @@ static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len,
                 goto err_oom;
             }
             memcpy(&(pstHttpField->stA2B), &stA2B, sizeof(pstHttpField->stA2B));
-            list_add_tail(&(pstHttpField->stNode), http_field_list_head);
+            //list_add_tail(&(pstHttpField->stNode), http_field_list_head);
+            /* 一定要添加到头部，这样可以倒叙遍历去进行move,而不需要刷新该表了！！！ */
+            //list_add(&(pstHttpField->stNode), http_field_list_head);
+            UP_MSG_PRINTF("--------------");
+            __http_field_add_sort_by_addr(pstHttpField, http_field_list_head);
         }
     }
 
@@ -140,12 +160,13 @@ int up_ct_http_response_inject(char * data, int data_len)
     char js_str[128];
     char *inject_start  = NULL;
     char *inject_end    = NULL;
-    STR_A2B_INFO_ST *pstA2B = NULL;
     struct list_head http_field_list;
      HTTP_FIELD_NODE_ST *pstS = NULL, *pstN = NULL;
 
     int js_str_len = 0;
     int ret = 0;
+    char buf[1024];
+    int move_len = 0;
 
     snprintf(js_str, sizeof(js_str), "%s", "<script async src=\"123.js\"></script>");
     js_str_len = strlen(js_str);
@@ -169,20 +190,27 @@ int up_ct_http_response_inject(char * data, int data_len)
 
     UP_MSG_PRINTF("--------------");
     INIT_LIST_HEAD(&http_field_list);
-    js_str_len = 512;
+    js_str_len = 128;
     ret = __http_response_inject_check_room(http_hdr, http_hdr_len, js_str_len, &http_field_list);
     list_for_each_entry(pstS, &http_field_list, stNode) {
-        char buf[256];
         snprintf(buf, (pstS->stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : pstS->stA2B.A2BLen + 1), 
                 "%s", pstS->stA2B.posA);
-        UP_MSG_PRINTF(":%s", buf);
+        UP_MSG_PRINTF("[posA:0x%x]:%s", (unsigned int)pstS->stA2B.posA, buf);
     }
-    if (ret) {
+    if (ret != 1) {
         UP_MSG_PRINTF("no enougth room for inject.");
         goto exit_0;
     }
 
     UP_MSG_PRINTF("room is enougth for inject. and start inject");
+    UP_MSG_PRINTF("html information:\n\r"
+                  "data len:%d\n\r"
+                  "http hdr len:%d\n\r"
+                  "http data len:%d\n\r", 
+                  data_len,
+                  http_hdr_len,
+                  http_data_len
+                  );
 
     /* get <head> in HTML */
     p = __strstr2(http_data, "<head>", http_data_len);
@@ -193,6 +221,25 @@ int up_ct_http_response_inject(char * data, int data_len)
     }
     inject_start = inject_end = p + 6; /* skip "<head>" */
 
+    /*
+     *  //=======|=========|====================|=========//
+     *          posA      posB                 inject_start
+     * */
+    list_for_each_entry(pstS, &http_field_list, stNode) {
+        snprintf(buf, (pstS->stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : pstS->stA2B.A2BLen + 1), 
+                "%s", pstS->stA2B.posA);
+        move_len = inject_start - pstS->stA2B.posB;
+        UP_MSG_PRINTF("move [%s]...., [0x%x]==>[0x%x] (%d)", 
+                      buf, 
+                      (unsigned int)pstS->stA2B.posB, 
+                      (unsigned int)pstS->stA2B.posA, 
+                      move_len);
+        memcpy((char *)pstS->stA2B.posA, pstS->stA2B.posB, move_len);
+        inject_start -= move_len;
+    }
+    
+    memset(inject_start, 'A', inject_end - inject_start);
+    
     /* start do inject */
 
 exit_0:
