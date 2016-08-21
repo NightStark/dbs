@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>html test</title>
+</head>
+
+<body>
+<div>  
+  <h1><a href="http://blog.csdn.net/dianhuiren/article/details/7458727">kmalloc 与vmalloc</a></h1>
+</div>
+<div>
+  <div>2012-04-13 17:21 <span title="阅读次数">2330人阅读</span> <span title="评论次数"><a href="http://blog.csdn.net/dianhuiren/article/details/7458727#comments" onclick="_gaq.push(['_trackEvent','function', 'onclick', 'blog_articles_pinglun'])">评论</a>(0)</span> <span data-mod="popu_171"><a href="javascript:void(0);" onclick="javascript:collectArticle('kmalloc 与vmalloc','7458727');return false;" title="收藏">收藏</a></span> <a href="http://blog.csdn.net/dianhuiren/article/details/7458727#report" onclick="javascript:report(7458727,2);return false;" title="举报">举报</a></div>
+</div>
+<div>
+  <div><img src="http://static.blog.csdn.net/images/category_icon.jpg" alt="" /> 分类：</div>
+  <div>
+    <label onclick="GetCategoryArticles('907996','dianhuiren','top','7458727');"><span onclick="_gaq.push(['_trackEvent','function', 'onclick', 'blog_articles_fenlei']);">内核编程<em>（46）</em></span> <img src="http://static.blog.csdn.net/images/arrow_triangle%20_down.jpg" alt="" /></label>
+  </div>
+</div>
+<div id="article_content">
+  <div id="sina_keyword_ad_area2">
+    <p id="p"><span id="p"><strong>kmalloc()和vmalloc()介绍</strong></span></p>
+    <p>kmalloc()</p>
+    <p id="p">用于申请较小的、连续的物理内存</p>
+    <p id="p">1. 以字节为单位进行分配，在&lt;linux/slab.h&gt;中</p>
+    <p id="p">2. void *kmalloc(size_t size, int flags)分配的内存物理地址上连续，虚拟地址上自然连续</p>
+    <p id="p">3. gfp_mask标志：什么时候使用哪种标志？如下：</p>
+    <p id="p">———————————————————————————————-<br />
+      情形                      相应标志<br />
+      ———————————————————————————————-<br />
+      进程上下文，可以睡眠         GFP_KERNEL<br />
+      进程上下文，不可以睡眠       GFP_ATOMIC<br />
+      中断处理程序               GFP_ATOMIC<br />
+      软中断                    GFP_ATOMIC<br />
+      Tasklet                    GFP_ATOMIC<br />
+      用于DMA的内存，可以睡眠      GFP_DMA | GFP_KERNEL<br />
+      用于DMA的内存，不可以睡眠     GFP_DMA |GFP_ATOMIC<br />
+      ———————————————————————————————-</p>
+    <p id="p">4. void kfree(const void *ptr)</p>
+    <p id="p">释放由kmalloc()分配出来的内存块<br />
+      <br />
+      vmalloc()</p>
+    <p id="p">用于申请较大的内存空间，虚拟内存是连续的</p>
+    <p id="p">1.以字节为单位进行分配，在&lt;linux/vmalloc.h&gt;中</p>
+    <p id="p">2. void *vmalloc(unsigned long size) 分配的内存虚拟地址上连续，物理地址不连续</p>
+    <p id="p">3.一般情况下，只有硬件设备才需要物理地址连续的内存，因为硬件设备往往存在于MMU之外，根本不了解虚拟地址；但为了性能上的考虑，内核中一般使用kmalloc()，而只有在需要获得大块内存时才使用vmalloc()，例如当模块被动态加载到内核当中时，就把模块装载到由vmalloc()分配的内存上。</p>
+    <p id="p">4.void vfree(void *addr)，这个函数可以睡眠，因此不能从中断上下文调用。</p>
+    <p><strong>malloc(), vmalloc()和kmalloc()区别</strong></p>
+    <p id="p">[*]kmalloc和vmalloc是分配的是内核的内存,malloc分配的是用户的内存</p>
+    <p id="p">[*]kmalloc保证分配的内存在物理上是连续的,vmalloc保证的是在虚拟地址空间上的连续,malloc不保证任何东西(这点是自己猜测的,不一定正确)</p>
+    <p id="p">[*]kmalloc能分配的大小有限,vmalloc和malloc能分配的大小相对较大</p>
+    <p id="aeaoofnhgocdbnbeljkmbjdmhbcokfdb-mousedown">[*]内存只有在要被DMA访问的时候才需要物理上连续</p>
+    <p id="p">[*]vmalloc比kmalloc要慢</p>
+  </div>
+</div>
+</body>
+</html>
