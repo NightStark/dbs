@@ -10,9 +10,9 @@
 
 static const char * g_http_header_field_list[] = 
 {
-    "Accept",
-    "Accept-Charset",
-    "Accept-Encoding",
+    //"Accept",
+    //"Accept-Charset",
+    //"Accept-Encoding",
     "Accept-Language",
     "Accept-Ranges",
     "Age",
@@ -22,17 +22,17 @@ static const char * g_http_header_field_list[] =
     "Connection",
     "Content-Encoding",
     "Content-Language",
-    "Content-Length",
+    //"Content-Length",
     "Content-Location",
     "Content-MD5",
     "Content-Range",
-    "Content-Type",
+    //"Content-Type",
     "Date",
     "ETag",
     "Expect",
     "Expires",
     "From",
-    "Host",
+    //"Host",
     "If-Match",
     "If-Modified-Since",
     "If-None-Match",
@@ -50,7 +50,6 @@ static const char * g_http_header_field_list[] =
     "Server",
     "TE",
     "Trailer",
-    "",
 };
 
 static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len, 
@@ -63,18 +62,28 @@ static int __http_response_inject_check_room(char *http_hdr, int http_hdr_len,
 
     memset(&stA2B, 0, sizeof(stA2B));
 
-    //TODO:can for a loop
-
-    for (i = 0; i < ARRAY_SIZE(g_http_header_field_list); i++)
-    if (0 == _get_http_header_filed(http_hdr, http_hdr_len, g_http_header_field_list[i], &stA2B)) {
-        dig_len += stA2B.A2BLen;
-        pstHttpField = vmalloc(sizeof(HTTP_FIELD_NODE_ST));
-        if (pstHttpField == NULL) {
-            UP_MSG_PRINTF("oom ...!");
-            goto err_oom;
+    for (i = 0; i < ARRAY_SIZE(g_http_header_field_list); i++) {
+        if (0 == _get_http_header_filed(http_hdr, http_hdr_len, g_http_header_field_list[i], &stA2B)) {
+            dig_len += stA2B.A2BLen;
+            /*pstHttpField = vmalloc(sizeof(HTTP_FIELD_NODE_ST));
+             *use vmalloc will cause:
+             *  211.998180]  [<c1096810>] ? __vmalloc_node_range+0x50/0x1c0
+             *  [  211.999119]  [<d0d7bb4a>] ? up_ct_http_response_inject+0x21a/0x4c0 [mod_up]
+             *  [  212.000273]  [<c13e0576>] ? printk+0x37/0x3b
+             *  [  212.000995]  [<c10969c3>] ? __vmalloc_node+0x43/0x50
+             *  [  212.001827]  [<d0d7bb4a>] ? up_ct_http_response_inject+0x21a/0x4c0 [mod_up]
+             *
+             *  kmalloc 适用于物理上连续的小内存。
+             *  vmalloc 用于虚拟的大块内存。
+             */
+            pstHttpField = kmalloc(sizeof(HTTP_FIELD_NODE_ST), GFP_ATOMIC);
+            if (pstHttpField == NULL) {
+                UP_MSG_PRINTF("oom ...!");
+                goto err_oom;
+            }
+            memcpy(&(pstHttpField->stA2B), &stA2B, sizeof(pstHttpField->stA2B));
+            list_add_tail(&(pstHttpField->stNode), http_field_list_head);
         }
-        memcpy(&(pstHttpField->stA2B), &stA2B, sizeof(pstHttpField->stA2B));
-        list_add_tail(&(pstHttpField->stNode), http_field_list_head);
     }
 
     if (dig_len >= need_len) {
@@ -133,6 +142,7 @@ int up_ct_http_response_inject(char * data, int data_len)
     char *inject_end    = NULL;
     STR_A2B_INFO_ST *pstA2B = NULL;
     struct list_head http_field_list;
+     HTTP_FIELD_NODE_ST *pstS = NULL, *pstN = NULL;
 
     int js_str_len = 0;
     int ret = 0;
@@ -157,10 +167,10 @@ int up_ct_http_response_inject(char * data, int data_len)
         return -1;
     }
 
+    UP_MSG_PRINTF("--------------");
     INIT_LIST_HEAD(&http_field_list);
     js_str_len = 512;
     ret = __http_response_inject_check_room(http_hdr, http_hdr_len, js_str_len, &http_field_list);
-     HTTP_FIELD_NODE_ST *pstS = NULL;
     list_for_each_entry(pstS, &http_field_list, stNode) {
         char buf[256];
         snprintf(buf, (pstS->stA2B.A2BLen + 1 >= sizeof(buf) ? sizeof(buf) : pstS->stA2B.A2BLen + 1), 
@@ -169,7 +179,7 @@ int up_ct_http_response_inject(char * data, int data_len)
     }
     if (ret) {
         UP_MSG_PRINTF("no enougth room for inject.");
-        return -1;
+        goto exit_0;
     }
 
     UP_MSG_PRINTF("room is enougth for inject. and start inject");
@@ -178,11 +188,19 @@ int up_ct_http_response_inject(char * data, int data_len)
     p = __strstr2(http_data, "<head>", http_data_len);
     if (p == NULL) {
         UP_MSG_PRINTF("find <head> failed.");
-        return -1;
+        ret = -1;
+        goto exit_0;
     }
     inject_start = inject_end = p + 6; /* skip "<head>" */
 
     /* start do inject */
 
-    return 0;
+exit_0:
+    /* clear nodes */
+    list_for_each_entry_safe (pstS, pstN, &http_field_list, stNode) {
+        list_del(&(pstS->stNode));
+        kfree(pstS);
+    }
+
+    return ret;
 }

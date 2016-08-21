@@ -265,14 +265,14 @@ up_ct_http_response(char *data, int data_len)
     UP_MSG_PRINTF(":%s", buf);
     /* check if this is a noraml html file */
     p  = __A2B_strstr(&stA2B, "text/html");
-    p1 = __A2B_strstr(&stA2B, "application/x-javascript");
-    if (p != NULL || p1 != NULL) {
+    //p1 = __A2B_strstr(&stA2B, "application/x-javascript");
+    if (p != NULL) {
         /* inject */
         return up_ct_http_response_inject(data, data_len);
     }
     /* check content type end */
 
-    UP_MSG_PRINTF("http is not text/html or javascript .");
+    UP_MSG_PRINTF("http is not text/html.");
     return -1;
 }
 
@@ -386,12 +386,14 @@ static unsigned int up_ct_http_hook_cb(unsigned int hooknum,
         //up_report_data();
         //UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
         if (sport == 80 /* || dport == 80 */) {
+        /*
             UP_MSG_PRINTF("dport:%d sport:%d", dport, sport);
             _ip2str(dst_ip, buf, sizeof(buf));
             UP_MSG_PRINTF("dip:%s", buf);
             _ip2str(src_ip, buf, sizeof(buf));
             UP_MSG_PRINTF("sip:%s", buf);
             UP_MSG_PRINTF("data len:%d", data_len);
+            */
 
             //snprintf(buf, sizeof(buf), "%s", pdata);
             //UP_MSG_PRINTF("http data:%s", buf);
