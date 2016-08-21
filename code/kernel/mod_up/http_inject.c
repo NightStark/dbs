@@ -235,7 +235,7 @@ int up_ct_http_response_inject(char * data, int data_len)
                       (unsigned int)pstS->stA2B.posA, 
                       move_len);
         memcpy((char *)pstS->stA2B.posA, pstS->stA2B.posB, move_len);
-        inject_start -= move_len;
+        inject_start -= pstS->stA2B.A2BLen;
     }
     
     memset(inject_start, 'A', inject_end - inject_start);
