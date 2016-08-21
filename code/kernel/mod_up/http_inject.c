@@ -152,23 +152,26 @@ err_oom:
 
 int up_ct_http_response_inject(char * data, int data_len)
 {
-    char *p = NULL;
-    char *http_data     = NULL;
-    int   http_data_len = 0;
-    char *http_hdr      = NULL;
-    int   http_hdr_len  = 0;
-    char js_str[128];
-    char *inject_start  = NULL;
-    char *inject_end    = NULL;
+    char *p                = NULL;
+    char *http_data        = NULL;
+    int   http_data_len    = 0;
+    char *http_hdr         = NULL;
+    int   http_hdr_len     = 0;
+    char *inject_start     = NULL;
+    char *inject_end       = NULL;
+    int   js_str_len       = 0;
+    int   ret              = 0;
+    int   move_len         = 0;
+    int   pad_len          = 0;
+    int   diged_len        = 0;
+    int   injected_str_len = 0;
+    char  buf[1024];
+    char  js_str[128];
     struct list_head http_field_list;
-     HTTP_FIELD_NODE_ST *pstS = NULL, *pstN = NULL;
+    HTTP_FIELD_NODE_ST *pstS = NULL, *pstN = NULL;
+    
 
-    int js_str_len = 0;
-    int ret = 0;
-    char buf[1024];
-    int move_len = 0;
-
-    snprintf(js_str, sizeof(js_str), "%s", "<script async src=\"123.js\"></script>");
+    snprintf(js_str, sizeof(js_str), "%s", "<script src=\"my.js\"></script>");
     js_str_len = strlen(js_str);
 
     http_hdr = data;
@@ -190,6 +193,7 @@ int up_ct_http_response_inject(char * data, int data_len)
 
     UP_MSG_PRINTF("--------------");
     INIT_LIST_HEAD(&http_field_list);
+    /* 128 is a test value */
     js_str_len = 128;
     ret = __http_response_inject_check_room(http_hdr, http_hdr_len, js_str_len, &http_field_list);
     list_for_each_entry(pstS, &http_field_list, stNode) {
@@ -221,6 +225,8 @@ int up_ct_http_response_inject(char * data, int data_len)
     }
     inject_start = inject_end = p + 6; /* skip "<head>" */
 
+    /* start do inject */
+    /* step 1, dig room */
     /*
      *  //=======|=========|====================|=========//
      *          posA      posB                 inject_start
@@ -237,10 +243,20 @@ int up_ct_http_response_inject(char * data, int data_len)
         memcpy((char *)pstS->stA2B.posA, pstS->stA2B.posB, move_len);
         inject_start -= pstS->stA2B.A2BLen;
     }
+
+    if (inject_start < http_hdr) {
+        UP_MSG_PRINTF("inject start < http hdr failed.");
+        ret = -1;
+        goto exit_0;
+    }
+
+    /* do inject js string */
+    diged_len =  inject_end - inject_start;
+    injected_str_len = snprintf(inject_start, diged_len, "%s", js_str);
+    pad_len = diged_len - injected_str_len;
+
+    memset(inject_start + injected_str_len, ' ', pad_len);
     
-    memset(inject_start, 'A', inject_end - inject_start);
-    
-    /* start do inject */
 
 exit_0:
     /* clear nodes */

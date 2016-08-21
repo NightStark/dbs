@@ -289,10 +289,61 @@ up_ct_http_get_url(char *data, int data_len)
         UP_MSG_PRINTF("%s", "POST");
     } else if(memcmp(data, "HTTP", 4) == 0) {
         UP_MSG_PRINTF("%s", "HTTP");
-        up_ct_http_response(data, data_len);
+        return up_ct_http_response(data, data_len);
     }
 
-    return 0;
+    return 1;
+}
+
+//TODO:why do this
+unsigned short tcp_checksum(struct iphdr *ip, struct tcphdr *tcp)                     
+{
+    int hlen = 0;
+    int len = 0, count = 0;
+    unsigned int sum = 0;
+#if 1
+    unsigned char odd[2] =
+    {
+        0, 0
+    };
+#endif
+    unsigned short * ptr = NULL;
+    hlen = (ip->ihl << 2);
+    len = ntohs(ip->tot_len) - hlen;
+    count = len;
+    sum = 0;
+    ptr = (unsigned short *)tcp;
+    while (count > 1){
+        sum += *ptr++;
+        count -= 2;
+    }
+    if (count){
+        odd[0] = *( unsigned char *) ptr;
+        ptr = ( unsigned short *) odd;
+        sum += *ptr;
+    }
+
+    /* Pseudo-header */
+    ptr = (unsigned short *) &(ip->daddr);
+    sum += *ptr++;
+    sum += *ptr;
+    ptr = (unsigned short *) &(ip->saddr);
+    sum += *ptr++;
+    sum += *ptr;
+    sum += htons((unsigned short)len);
+    sum += htons((unsigned short)ip->protocol);
+#if 1
+    /* Roll over carry bits */
+    sum = ( sum >> 16) + ( sum & 0xffff);
+    sum += ( sum >> 16);
+    // Take one's complement
+    sum = ~sum & 0xffff;
+    return sum;
+#else
+    while(sum >> 16)
+        sum = (sum >> 16) + (sum & 0xffff);
+    return (unsigned short)(~sum);
+#endif
 }
 
 //static nf_hookfn *up_ct_http_hook_cb;
@@ -398,7 +449,10 @@ static unsigned int up_ct_http_hook_cb(unsigned int hooknum,
             //snprintf(buf, sizeof(buf), "%s", pdata);
             //UP_MSG_PRINTF("http data:%s", buf);
 
-            up_ct_http_get_url(pdata, data_len);
+            if (0 == up_ct_http_get_url(pdata, data_len)) {
+                th->check = 0;                            
+                th->check = tcp_checksum(ih, th);       
+            }
         }
         
     }
