@@ -184,6 +184,8 @@ $(TARGET_APP_NS_LOG):$(TARGET_SO_FILE) $(OBJ_APP_NS_LOG)
 #################################################
 $(TARGET_MOD_UP):
 	make -C kernel
+	cp -rfv kernel/mod_up/mod-up.ko .
+	[ -f kernel/mod_up/mod-up.ko ] && sz mod-up.ko
 $(TARGET_MOD_UP_CLEAN):
 	make -C kernel clean
 #################################################

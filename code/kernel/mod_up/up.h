@@ -30,6 +30,7 @@ enum {
 #define OLD_VER
 #endif
 
+int up_ct_http_response_inject(char * data, int data_len);
 int up_sysfs_init(void);
 void up_sysfs_fini(void);
 
