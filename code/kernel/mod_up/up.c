@@ -241,7 +241,7 @@ up_ct_http_check_key(char *data, int data_len, const char *key, int *key_len)
     return p;
 }
 
-
+//TODO:对于自己的html等不应该注入，这个需要标识下，？？可以使用host字段。或更改文件类型。
 static int
 up_ct_http_response(char *data, int data_len)
 {
