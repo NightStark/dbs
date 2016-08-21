@@ -1,7 +1,7 @@
 MODNAME = mod-up
 
 obj-m := $(MODNAME).o
-$(MODNAME)-objs = up.o up_sysfs.o
+$(MODNAME)-objs = up.o up_sysfs.o http_inject.o string.o
 
 #ARCH := mips                           
 #CC=mips-linux-gcc
