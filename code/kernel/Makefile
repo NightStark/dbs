@@ -16,6 +16,10 @@ CC=i486-openwrt-linux-gcc
 mod-up:                                    
 	@echo ======CC=$(CC)=====
 	make -C $(KDIR) M=$(PWD)/mod_up modules
+dns-intercept:                                    
+	@echo ======CC=$(CC)=====
+	make -C $(KDIR) M=$(PWD)/dns_intercept modules
 
 clean:
 	make -C $(PWD)/mod_up clean
+	make -C $(PWD)/dns_intercept clean

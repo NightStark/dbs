@@ -383,6 +383,7 @@ unsigned int __bhudns_skb_intercept_v6(struct sk_buff *skb)
 
 
     printk("[%s][%d]----------\n", __func__, __LINE__);
+    /* copy from "linux kernel fund:ip6_mc_input()"*/
 	hdr = ipv6_hdr(skb);
     nexthdr = hdr->nexthdr;
     offset = ipv6_skip_exthdr(skb, sizeof(*hdr),
