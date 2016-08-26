@@ -891,6 +891,9 @@ void odhcpd_run(int argc, char *argv[])
 #endif
     while(1) {
         c = getopt(argc, argv, "s:c:i:d:");
+        if (c <= 0) {
+            break;
+        }
         switch (c) {
             case 's':
                 snprintf(dhcp_statefile, sizeof(dhcp_statefile), "%s", optarg);
