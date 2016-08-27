@@ -495,6 +495,7 @@ unsigned int bhudns_skb_intercept_handle(
 
         uh = (struct udphdr*)((u8*)ih + ip_hdrlen(skb));
     } else {
+         /* copy from "linux kernel fund:ip6_mc_input()" */
         v6hdr = ipv6_hdr(skb);
         nexthdr = v6hdr->nexthdr;
         offset = ipv6_skip_exthdr(skb, sizeof(*v6hdr),
@@ -505,15 +506,15 @@ unsigned int bhudns_skb_intercept_handle(
         }
         //bhudns_dump_packet(skb->data, skb->len);
         uh = (struct udphdr*)(skb_network_header(skb) + offset);
-        printk("[%s][%d]-----source:%d dest:%d-----\n", __func__, __LINE__, uh->source, uh->dest);
+        printk("[%s][%d]-----source:%d dest:%d-----\n", __func__, __LINE__, ntohs(uh->source), ntohs(uh->dest));
     }
 
 
-    if (!_is_v6) {
+    //if (!_is_v6) {
         if(uh->dest != htons(53) && uh->source != htons(53)) { //not dns packet
             return NF_ACCEPT;
         }
-    }
+    //}
 
     dh = (struct bhu_dns_hdr *)((u8*)uh + sizeof(*uh));
     flag.unit = ntohs(dh->flag.unit);
@@ -604,7 +605,7 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         memcpy(eh->h_source, buf, ETH_ALEN);
 
         if (_is_v6) {
-            /* copy from udp_v6_push_pending_frames() */
+            /* copy from linux kernel: udp_v6_push_pending_frames() */
             __wsum csum = csum_partial(skb_transport_header(skb),
                     sizeof(struct udphdr), 0);
             uh->check = csum_ipv6_magic(&(v6hdr->saddr), &(v6hdr->daddr),
