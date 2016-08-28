@@ -59,6 +59,15 @@ struct bhu_dns_hdr {
     __be16  arcount;
 };
 
+struct dns_resp_soa_i
+{
+    __be32 sn;
+    __be32 ref_int;
+    __be32 re_int;
+    __be32 exp_limit;
+    __be32 mini_ttl;
+} __attribute__((packed));
+
 struct dns_response {
     __be16  name;
     __be16  type;
@@ -85,5 +94,6 @@ dns_reg_hook(DNS_RSP_HOOK hook, void *args);
 
 int
 dns_unreg_hook(DNS_RSP_HOOK hook);
+int __dn_comp(const char *src, unsigned char *dst, int space, unsigned char **dnptrs, unsigned char **lastdnptr);
 
 #endif
