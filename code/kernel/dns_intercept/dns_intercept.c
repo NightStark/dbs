@@ -398,7 +398,7 @@ struct sk_buff *bhudns_skb_new_udp_pack(
     struct sk_buff *skb  = NULL;
     struct udphdr  *udph = NULL;
     struct iphdr   *iph  = NULL;
-    char *rsp = NULL;
+    //char *rsp = NULL;
     
     printk("[%s][%d]----daddr:0x%x saddr:0x%x dst:%d src:%d------\n", 
             __func__, __LINE__,
@@ -409,9 +409,9 @@ struct sk_buff *bhudns_skb_new_udp_pack(
             );
     printk("[%s][%d]----udp msg:0x%x udp msg len:%d rsp msg:0x%x rsp msg len:%d------\n", 
             __func__, __LINE__,
-            udp_msg,
+            (__be32)udp_msg,
             udp_msg_len,
-            dns_rsp,
+            (__be32)dns_rsp,
             dns_rsp_len
             );
 
@@ -436,7 +436,15 @@ struct sk_buff *bhudns_skb_new_udp_pack(
         skb_copy_to_linear_data(skb, udp_msg, udp_msg_len);
         skb->len += udp_msg_len;
         printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
+        /* add dns response data */
+        if (dns_rsp != NULL && dns_rsp_len != 0) {
+            skb_copy_to_linear_data_offset(skb, udp_msg_len, dns_rsp, dns_rsp_len);
+            skb->len += dns_rsp_len;
+            printk("[%s][%d]-add rsp data---skb len:%d-----\n",  __func__, __LINE__, skb->len);
+        }
     }
+
+    printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
 
     /* init & set udp header info */
     skb_push(skb, sizeof(struct udphdr));
@@ -444,18 +452,6 @@ struct sk_buff *bhudns_skb_new_udp_pack(
     
     printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
 
-    /* add dns response data */
-    if (dns_rsp != NULL) {
-        rsp = skb_put(skb, dns_rsp_len);
-        if (rsp == NULL) {
-            //skb_free(skb);
-            skb = NULL;
-            return NULL;
-        }
-        memcpy(rsp, dns_rsp, dns_rsp_len);
-    }
-
-    printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
     udph = udp_hdr(skb);
     udph->source = src;
     udph->dest = dst;
@@ -514,8 +510,8 @@ unsigned int bhudns_skb_intercept_handle(
     char buf[256] = {0};
     struct name_node *node = NULL;
     struct dns_response answer;
-    char *p = NULL;
-    __be32 addr = 0;
+    //char *p = NULL;
+    //__be32 addr = 0;
     union flag_union flag;
     struct sk_buff *rsp_skb = NULL;
 
@@ -601,6 +597,7 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
                 (ntohs(uh->len) - sizeof(struct udphdr)), 
                 (unsigned char *)&answer,
                 sizeof(answer)
+                //NULL, 0
                 );
         rsp_skb->dev = skb->dev;
 
@@ -622,6 +619,7 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         bhudns_dump_packet(rsp_skb->data, rsp_skb->len);
         printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, rsp_skb->len);
 
+#if 0
         if(!(p = skb_put(skb, sizeof(answer))))
             return NF_ACCEPT;
         memcpy(p, &answer, sizeof(answer));
@@ -652,6 +650,7 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         skb_push(skb, 14);
         if (eh->h_proto == htons(ETH_P_8021Q))
             skb_push(skb, 4);
+#endif
 
         printk("[%s][%d]-----dump *skb------------\n", __func__, __LINE__);
         __dump_data((u8 *)skb, sizeof(*skb));
