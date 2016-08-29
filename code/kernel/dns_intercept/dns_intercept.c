@@ -25,7 +25,6 @@
 #include <linux/kobject.h>
 #include <net/ip.h>
 #include <net/tcp.h>
-#include <net/addrconf.h>
 #include <linux/timer.h>
 #include <linux/version.h>
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31)
@@ -82,10 +81,21 @@ static void
 bhudns_dump_packet(u8 *ptr, int len)
 {
     int i;
-    /*
     if(bhudns_debug <= 1)
         return;
-        */
+    for (i = 0; i < len; i++) {
+        if (!(i%16))
+            printk("\n %04x", i);
+        printk(" %02x", ptr[i]);
+    }
+    printk("\n");
+}
+
+static void
+__dump_data(u8 *ptr, int len)
+{
+    int i;
+
     for (i = 0; i < len; i++) {
         if (!(i%16))
             printk("\n %04x", i);
@@ -374,73 +384,6 @@ bhudns_handle_dns_rsp(struct bhu_dns_hdr *dh, u32 pktlen)
     return 0;
 }
 
-int __get_lan_if_ipv6(const struct net_device *indev, u32 *ip, const struct in6_addr *saddr)                            
-{
-    const struct net_device *dev;                                                                                        
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31)                                                                          
-    struct net_bridge_port *p = NULL;                                                                                    
-#endif                                                                                                                   
-    //char buf[128];                                                                                                       
-    struct net *net = NULL;                                                                                              
-    struct inet6_ifaddr *in6_ifaddr = NULL;                                                                              
-
-    if (!indev||!ip) {                                                                                                   
-        return -1;                                                                                                       
-    }                                                                                                                    
-
-    dev = indev;                                                                                                         
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31)                                                                          
-    p = br_port_get_rcu(dev);                                                                                            
-    if (p && p->br && p->br->dev)                                                                                        
-        dev = p->br->dev;                                                                                                
-#else                                                                                                                    
-    if (dev->br_port && dev->br_port->br && dev->br_port->br->dev)                                                       
-        dev = dev->br_port->br->dev;                                                                                     
-#endif                                                                                                                   
-
-    net = dev_net(dev);                                                                                                  
-    //in6_ifaddr = ipv6_get_ifaddr(net, 0, (struct net_device *)indev, 1);                                                                
-    if (in6_ifaddr != NULL) {                                                                                            
-        //snprintf(buf, sizeof(buf), "%x", in6_ifaddr->addr);                                                              
-        //bhudns_dump_packet((u8 *)&(in6_ifaddr->addr), 16);
-    }                                                                                                                    
-
-    //return bhudns_get_if_ipv6(dev, ip, saddr);                                                                         
-    return 0;                                                                                                            
-}                                                                                                                        
-
-unsigned int __bhudns_skb_intercept_v6(struct sk_buff *skb, const struct net_device *in)
-{
-    u8 nexthdr = 0;
-    int offset = 0;
-    __be16 frag_off;
-    const struct ipv6hdr *hdr = NULL;
-	struct udphdr *uh = NULL;
-    u32 ip = 0;
-
-
-    //printk("[%s][%d]----------\n", __func__, __LINE__);
-    /* copy from "linux kernel fund:ip6_mc_input()"*/
-	hdr = ipv6_hdr(skb);
-    nexthdr = hdr->nexthdr;
-    offset = ipv6_skip_exthdr(skb, sizeof(*hdr),
-            &nexthdr, &frag_off);
-
-    //if (ntohs(nexthdr) == IPPROTO_UDP) {
-    if (nexthdr == IPPROTO_UDP) {
-        //offset = 0;
-        bhudns_dump_packet(skb->data, skb->len);
-        //printk("[%s][%d]-----offset=%d-----\n", __func__, __LINE__, offset);
-        uh = (struct udphdr*)(skb_network_header(skb) + offset);
-        //uh = (struct udphdr*)(((u8 *)hdr) + offset);
-        //uh = (struct udphdr*)((u8*)ih + ip_hdrlen(skb));
-        //printk("[%s][%d]-----source:%d dest:%d-----\n", __func__, __LINE__, ntohs(uh->source), ntohs(uh->dest));
-        __get_lan_if_ipv6(in, &ip,  &(hdr->saddr));
-    }
-
-    return 0;
-}
-
 struct sk_buff *bhudns_skb_new_udp_pack(
                                         __be32 daddr,
                                         __be32 saddr,
@@ -496,50 +439,56 @@ struct sk_buff *bhudns_skb_new_udp_pack(
     }
 
     /* init & set udp header info */
-    skb_push(skb, sizeof(struct tcphdr));
+    skb_push(skb, sizeof(struct udphdr));
     skb_reset_transport_header(skb);
     
     printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
+
     /* add dns response data */
-    rsp = skb_put(skb, dns_rsp_len);
-    if (rsp == NULL) {
-        //skb_free(skb);
-        skb = NULL;
-        return NULL;
+    if (dns_rsp != NULL) {
+        rsp = skb_put(skb, dns_rsp_len);
+        if (rsp == NULL) {
+            //skb_free(skb);
+            skb = NULL;
+            return NULL;
+        }
+        memcpy(rsp, dns_rsp, dns_rsp_len);
     }
-    memcpy(rsp, dns_rsp, dns_rsp_len);
 
     printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
     udph = udp_hdr(skb);
     udph->source = src;
     udph->dest = dst;
-    udph->len = htons(udp_len + dns_rsp_len); /* dns rep is inster !! */
+    udph->len = htons(udp_len); /* dns rep is inster !! */
     udph->check = 0;
+    /*
     udph->check = csum_tcpudp_magic(saddr, daddr,
             udp_len, IPPROTO_UDP,
             csum_partial(udph, udp_len, 0));
     if (udph->check == 0)
         udph->check = CSUM_MANGLED_0;
+        */
     
 	skb_push(skb, sizeof(struct iphdr));
 	skb_reset_network_header(skb);
     printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
 	iph = ip_hdr(skb);
 	memset(iph, 0, sizeof(struct iphdr));
-	iph->protocol = IPPROTO_TCP;
-	//iph->version = 4;
-	//iph->ihl = 5;
-    put_unaligned(0x45, (unsigned char *)iph);
-	//iph->saddr = saddr;
-	//iph->daddr = daddr;
-    put_unaligned(saddr, &(iph->saddr));  
-    put_unaligned(daddr, &(iph->daddr)); 
-	iph->ttl = 53;
+	iph->protocol = IPPROTO_UDP;
+	iph->version = 4;
+	iph->ihl = 5;
+    //put_unaligned(0x45, (unsigned char *)iph);
+	iph->saddr = saddr;
+	iph->daddr = daddr;
+    //put_unaligned(saddr, &(iph->saddr));  
+    //put_unaligned(daddr, &(iph->daddr)); 
+	iph->ttl = 64;
 	iph->id = 0; 
 	iph->tos = 0;
-	//iph->tot_len = htons(len);
-    put_unaligned(htons(ip_len), &(iph->tot_len));
+	iph->tot_len = htons(ip_len);
+    //put_unaligned(htons(ip_len), &(iph->tot_len));
 	iph->frag_off = htons(IP_DF);
+    //iph->frag_off = htons(0x4000 & 0xE000); /* Do not fragment */
 	iph->check = 0;
 	iph->check =  ip_fast_csum((unsigned char *)iph, iph->ihl);       
 
@@ -547,7 +496,6 @@ struct sk_buff *bhudns_skb_new_udp_pack(
 
     return skb;
 }
-
 
 unsigned int bhudns_skb_intercept_handle(
 	unsigned int hooknum,
@@ -566,22 +514,10 @@ unsigned int bhudns_skb_intercept_handle(
     char buf[256] = {0};
     struct name_node *node = NULL;
     struct dns_response answer;
-    //char *p = NULL;
+    char *p = NULL;
     __be32 addr = 0;
     union flag_union flag;
-    int _is_v6 = 0;
-    u8 nexthdr = 0;
-    int offset = 0;
-    __be16 frag_off;
-    struct ipv6hdr *v6hdr = NULL;
-    struct in6_addr v6addr;
-    //char soa_buf[128];
-    //int  soa_len = 0;
-    //struct dns_resp_soa_i *soa = NULL;
-    //char rsp_buf[256] = {0};
     struct sk_buff *rsp_skb = NULL;
-
-
 
     if(!bhudns_enable)
         return NF_ACCEPT;
@@ -592,56 +528,29 @@ unsigned int bhudns_skb_intercept_handle(
 		return NF_ACCEPT;
 
 	ethtype = eh->h_proto;
-
 	if (skb->protocol==htons(ETH_P_IP)) {
 		ih = ip_hdr(skb);
-	} else if (skb->protocol==htons(ETH_P_IPV6)) {
-        //__bhudns_skb_intercept_v6(skb, in);
-        // TEST _is_v6 = 1;
-        //printk("[%s][%d]----is ipv6------\n", __func__, __LINE__);
 	}
 	
-    if (!_is_v6) {
-        if(skb->protocol==htons(ETH_P_8021Q) && ih) {
-            ih = (struct iphdr *)((u8*)ih+4);
-            ethtype = *(u16 *)((u8*)ih+2);
-        }
-        if (!ih || ih->protocol != IPPROTO_UDP) 
-            return NF_ACCEPT;
+	if(skb->protocol==htons(ETH_P_8021Q) && ih) {
+		 ih = (struct iphdr *)((u8*)ih+4);
+		 ethtype = *(u16 *)((u8*)ih+2);
+	 }
 
-        uh = (struct udphdr*)((u8*)ih + ip_hdrlen(skb));
-    } else {
-         /* copy from "linux kernel fund:ip6_mc_input()" */
-        v6hdr = ipv6_hdr(skb);
-        nexthdr = v6hdr->nexthdr;
-        offset = ipv6_skip_exthdr(skb, sizeof(*v6hdr),
-                &nexthdr, &frag_off);
-        if (nexthdr != IPPROTO_UDP) {
-            //printk("[%s][%d]----not UDP pkt------\n", __func__, __LINE__);
-            return NF_ACCEPT;
-        }
-        uh = (struct udphdr*)(skb_network_header(skb) + offset);
-        bhudns_dump_packet((u8 *)uh, skb->len - ((unsigned)uh - (unsigned int)skb->data));
-        printk("[%s][%d]source:%d dest:%d\n", __func__, __LINE__, ntohs(uh->source), ntohs(uh->dest));
-    }
+	if (!ih || ih->protocol != IPPROTO_UDP) 
+        return NF_ACCEPT;
+	
+    uh = (struct udphdr*)((u8*)ih + ip_hdrlen(skb));
 
-
-    //if (!_is_v6) {
     if(uh->dest != htons(53) && uh->source != htons(53)) { //not dns packet
         return NF_ACCEPT;
     }
-    //}
 
     dh = (struct bhu_dns_hdr *)((u8*)uh + sizeof(*uh));
     flag.unit = ntohs(dh->flag.unit);
-    if ((uh->dest == htons(53) && flag.bits.qr == 0)) {//dns query packet
-        if (!_is_v6) {
-            debug("got dns query pkt, skb:%p, dev:%s, skb_len:%d, proto:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->dev->name, skb->len, skb->protocol, eh, ih, uh);
-        } else {
-            printk("[%s][%d]----is ipv6------\n", __func__, __LINE__);
-            debug("got dns query pkt, skb:%p, dev:%s, skb_len:%d, proto:%d, eh:%p, v6hdr:%p, uh:%p\n", skb, skb->dev->name, skb->len, skb->protocol, eh, v6hdr, uh);
-        }
-        //bhudns_dump_packet(skb->data, skb->len);
+    if (uh->dest == htons(53) && flag.bits.qr == 0) {//dns query packet
+        debug("got dns query pkt, skb:%p, dev:%s, skb_len:%d, proto:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->dev->name, skb->len, skb->protocol, eh, ih, uh);
+        bhudns_dump_packet(skb->data, skb->len);
 debug("dh->qdcount:%d\n", ntohs(dh->qdcount));
         if(ntohs(dh->qdcount) != 1) {//questions should be 1 
             return NF_ACCEPT;
@@ -655,16 +564,10 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
             return NF_ACCEPT;
 
         debug("skb:%p, query for:%s\n", skb, buf);
-        printk("1 skb:%p, query for:%s\n", skb, buf);
-        if (_is_v6) {
-            printk("skb:%p, query for:%s\n", skb, buf);
-        }
 
         spin_lock(&bhudns_lock);
-
         if(!(node = bhudns_match_node(buf)))
             goto unlock_accept;
-        printk("2 skb:%p, query for:%s\n", skb, buf);
 
         //send fake response now
         memset(&answer, 0, sizeof(answer));
@@ -673,134 +576,37 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         answer.class = ntohs(0x01);
         answer.ttl = 0;
         answer.len = ntohs(4);
-#if 0
-        memset(&answer, 0, sizeof(answer));
-        answer.name = ntohs(0xc00c);
-        answer.type = ntohs(0x06); /* SOA */
-        answer.class = ntohs(0x01);
-        answer.ttl = 0;
-        answer.len = ntohs(0); //
-#endif
-        if (node->ip){
+        if(node->ip){
             answer.ip = htonl(node->ip);
         } else{
-            if (!_is_v6) {
-/*
-                soa_len = __dn_comp("ns1.dnsv2.%level3dnsadmin.dnspod.%", 
-                        soa_buf, sizeof(soa_buf), NULL, NULL) - 1; 
-                soa = (struct dns_resp_soa_i *)(soa_buf + soa_len);
-                soa->sn        = htonl(0x0808);
-                soa->ref_int   = htonl(0x0e10);
-                soa->re_int    = htonl(0x00b4);
-                soa->exp_limit = htonl(0x00127500);
-                soa->mini_ttl  = htonl(0x00b4);
-                soa_len += sizeof(struct dns_resp_soa_i);
-                */
-                if(bhudns_get_lan_if_ip(in, &answer.ip, ntohl(ih->saddr)))
-                    goto unlock_accept;
-                if(answer.ip == 0)
-                    goto unlock_accept;
-                answer.ip = htonl(answer.ip);
-            } else {
-                printk("[%s][%d]----is ipv6 intercept to 192.168.62.1------\n", __func__, __LINE__);
-                answer.ip = htonl(0xC0A83E01);
-            }
+            if(bhudns_get_lan_if_ip(in, &answer.ip, ntohl(ih->saddr)))
+                goto unlock_accept;
+            if(answer.ip == 0)
+                goto unlock_accept;
+            answer.ip = htonl(answer.ip);
         }
         spin_unlock(&bhudns_lock);
 
-        /*
-        if(!(p = skb_put(skb, sizeof(answer))))
-            return NF_ACCEPT;
-            */
-        //int need_put_len = sizeof(answer) + soa_len - sizeof(answer.ip);
-        //printk("[%s][%d]----need put len :%d------\n", __func__, __LINE__, need_put_len);
-        //int resp_udp_len = uh->len + need_put_len;
-
-        
-        /* overwrite answer.ip as soa start */
-        /*
-        if(!(p = skb_put(skb, need_put_len)))
-            return NF_ACCEPT;
-            */
-
-        
         flag.bits.qr = 1;
         flag.bits.aa = 1;
         flag.bits.ra = 1;
         dh->flag.unit = htons(flag.unit);
         dh->ancount = htons(1);
-        //memcpy(rsp_buf, &answer, sizeof(answer));
-        //memcpy(&answer.ip, soa_buf, soa_len);
-        //bhudns_dump_packet((u8*)&answer, (sizeof(answer) + soa_len - sizeof(answer.ip)));
+        
 
         printk("[%s][%d]----build new pack------\n", __func__, __LINE__);
         rsp_skb = bhudns_skb_new_udp_pack(ih->saddr, ih->daddr, 
                 uh->source, uh->dest, 
-                (unsigned char *)uh,
+                (unsigned char *)((u8 *)uh + sizeof(struct udphdr)),
                 (ntohs(uh->len) - sizeof(struct udphdr)), 
                 (unsigned char *)&answer,
                 sizeof(answer)
                 );
+        rsp_skb->dev = skb->dev;
+
         if (rsp_skb == NULL) {
             return NF_ACCEPT;
         }
-
-
-        /*
-        uh->len = htons(ntohs(uh->len) + sizeof(answer));
-        uh->check = uh->dest;
-        uh->dest = uh->source;
-        uh->source = uh->check;
-        uh->check = 0;
-        */
-
-#if 0
-        if (!_is_v6) {
-            ih->tot_len = htons(ntohs(ih->tot_len) + sizeof(answer));
-            addr = ih->saddr;
-            ih->saddr = ih->daddr;
-            ih->daddr = addr;
-            ih->check = 0;
-            ih->id = 0;
-            ip_send_check(ih);
-        } else {
-            memcpy(&v6addr,         &(v6hdr->saddr), sizeof(struct in6_addr));
-            memcpy(&(v6hdr->saddr), &(v6hdr->daddr), sizeof(struct in6_addr));
-            memcpy(&(v6hdr->daddr), &(v6addr),       sizeof(struct in6_addr));
-            v6hdr->payload_len = uh->len;
-        }
-
-        memcpy(buf, eh->h_dest, ETH_ALEN);
-        memcpy(eh->h_dest, eh->h_source, ETH_ALEN);
-        memcpy(eh->h_source, buf, ETH_ALEN);
-
-        if (_is_v6) {
-            /* copy from linux kernel: udp_v6_push_pending_frames() */
-            __wsum csum = csum_partial(skb_transport_header(skb),
-                    sizeof(struct udphdr), 0);
-            uh->check = csum_ipv6_magic(&(v6hdr->saddr), &(v6hdr->daddr),
-                    uh->len, IPPROTO_UDP, csum);
-        }
-
-        /* when caculate checksum, win can't get response. set it to 0, windows ok.
-         * uh->check = csum_tcpudp_magic(ih->saddr, ih->daddr,
-         ntohs(uh->len) - sizeof(*uh), IPPROTO_UDP,
-         csum_partial(uh, ntohs(uh->len) - sizeof(*uh), 0));
-         */
-        skb_push(skb, 14);
-        if (!_is_v6) {
-            if (eh->h_proto == htons(ETH_P_8021Q))
-                skb_push(skb, 4);
-        }
-
-        if (!_is_v6) {
-            debug("skb:%p, send response, skb_len:%d, protocol:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->len, skb->protocol, eh, ih, uh);
-        } else {
-            debug("skb:%p, send response, skb_len:%d, protocol:%d, eh:%p, v6hdr:%p, uh:%p\n", skb, skb->len, skb->protocol, eh, v6hdr, uh);
-        }
-        //bhudns_dump_packet(skb->data, skb->len);
-       #endif
-        /* copy eth heaer info */                             
         printk("[%s][%d]----skb len:%d-----\n", 
                 __func__, __LINE__, rsp_skb->len);
         eh2 = (struct ethhdr *)skb_push(rsp_skb, ETH_HLEN);       
@@ -813,15 +619,61 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         memcpy(eh2->h_dest, eth_hdr(skb)->h_source, ETH_ALEN); 
         printk("[%s][%d]----pack set over. ssp skb len:%d-----\n", 
                 __func__, __LINE__, rsp_skb->len);
-        //bhudns_dump_packet(rsp_skb->data, rsp_skb->len);
+        bhudns_dump_packet(rsp_skb->data, rsp_skb->len);
         printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, rsp_skb->len);
+
+        if(!(p = skb_put(skb, sizeof(answer))))
+            return NF_ACCEPT;
+        memcpy(p, &answer, sizeof(answer));
+
+        uh->len = htons(ntohs(uh->len) + sizeof(answer));
+        ih->tot_len = htons(ntohs(ih->tot_len) + sizeof(answer));
+        uh->check = uh->dest;
+        uh->dest = uh->source;
+        uh->source = uh->check;
+        uh->check = 0;
+
+        addr = ih->saddr;
+        ih->saddr = ih->daddr;
+        ih->daddr = addr;
+        ih->check = 0;
+        ih->id = 0;
+
+        memcpy(buf, eh->h_dest, ETH_ALEN);
+        memcpy(eh->h_dest, eh->h_source, ETH_ALEN);
+        memcpy(eh->h_source, buf, ETH_ALEN);
+
+        /* when caculate checksum, win can't get response. set it to 0, windows ok.
+         * uh->check = csum_tcpudp_magic(ih->saddr, ih->daddr,
+         ntohs(uh->len) - sizeof(*uh), IPPROTO_UDP,
+         csum_partial(uh, ntohs(uh->len) - sizeof(*uh), 0));
+         */
+        ip_send_check(ih);
+        skb_push(skb, 14);
+        if (eh->h_proto == htons(ETH_P_8021Q))
+            skb_push(skb, 4);
+
+        printk("[%s][%d]-----dump *skb------------\n", __func__, __LINE__);
+        __dump_data((u8 *)skb, sizeof(*skb));
+        printk("[%s][%d]-----dump *rsp_skb------------\n", __func__, __LINE__);
+        __dump_data((u8 *)rsp_skb, sizeof(*rsp_skb));
+        printk("[%s][%d]-----dump skb data------------\n", __func__, __LINE__);
+        __dump_data(skb->data, skb->len);
+        printk("[%s][%d]-----dump rsp skb data------------\n", __func__, __LINE__);
+        __dump_data(rsp_skb->data, rsp_skb->len);
+        printk("[%s][%d]-----------------\n", __func__, __LINE__);
+        debug("skb:%p, send response, skb_len:%d, protocol:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->len, skb->protocol, eh, ih, uh);
+        bhudns_dump_packet(skb->data, skb->len);
+        printk("[%s][%d]----xmit new pack------\n", __func__, __LINE__);
         dev_queue_xmit(rsp_skb);
         return NF_DROP;
+        //dev_queue_xmit(skb);
+        //return NF_STOLEN;
 unlock_accept:
         spin_unlock(&bhudns_lock);
     } else if (uh->source == htons(53) && flag.bits.qr) {//dns resp packet
         debug("got dns rsp pkt, skb:%p, dev:%s, skb_len:%d, proto:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->dev->name, skb->len, skb->protocol, eh, ih, uh);
-        //bhudns_dump_packet(skb->data, skb->len);
+        bhudns_dump_packet(skb->data, skb->len);
         bhudns_handle_dns_rsp(dh, uh->len-sizeof(struct udphdr));
     }
     return NF_ACCEPT;
@@ -1003,14 +855,14 @@ static struct nf_hook_ops bhudns_hooks[] = {
 		.hooknum = NF_BR_PRE_ROUTING, 	
 		.pf = PF_BRIDGE,
 		.priority = NF_BR_PRI_FIRST,
-		.hook = (nf_hookfn *)bhudns_skb_intercept_handle,
+		.hook = bhudns_skb_intercept_handle,
 	},
 	{
 		.owner = THIS_MODULE,
 		.hooknum = NF_BR_PRE_ROUTING,	
 		.pf = PF_INET,
 		.priority = NF_IP_PRI_FIRST,
-		.hook = (nf_hookfn *)bhudns_skb_intercept_handle,
+		.hook = bhudns_skb_intercept_handle,
 	},
 };
 
@@ -1024,7 +876,10 @@ static int __init bhudns_init(void)
     bhudns_enable = 1;
     bhudns_debug = 0;
     spin_lock(&bhudns_lock);
+    bhudns_add_name_node("auth.wi2o.cn", 0);
+    bhudns_add_name_node("u.u", 0);
     bhudns_add_name_node("bhuwifi.com", 0);
+    bhudns_add_name_node("bhuwifi2.com", 0);
     spin_unlock(&bhudns_lock);
 
     if(bhudns_add_sysfs(obj)){
