@@ -457,13 +457,12 @@ struct sk_buff *bhudns_skb_new_udp_pack(
     udph->dest = dst;
     udph->len = htons(udp_len); /* dns rep is inster !! */
     udph->check = 0;
-    /*
+
     udph->check = csum_tcpudp_magic(saddr, daddr,
             udp_len, IPPROTO_UDP,
             csum_partial(udph, udp_len, 0));
     if (udph->check == 0)
         udph->check = CSUM_MANGLED_0;
-        */
     
 	skb_push(skb, sizeof(struct iphdr));
 	skb_reset_network_header(skb);
@@ -493,6 +492,71 @@ struct sk_buff *bhudns_skb_new_udp_pack(
     return skb;
 }
 
+unsigned int bhudns_skb_build_soa(char *soa_buf, int buf_len)
+{
+    int soa_len = 0;
+    struct dns_resp_soa_i *soa = NULL;
+    char p1[] = {0x03, 0x6e, 0x73, 0x31, 0x05, 0x64, 0x6e, 0x73,
+                 0x76, 0x32, 0xc0, 0x25};
+    char p2[] = {0x0e, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x33, 0x64, 
+                 0x6e, 0x73, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x06, 
+                 0x64, 0x6e, 0x73, 0x70, 0x6f, 0x64, 0xc0, 0x25};
+    //__be32 *pbe32
+    struct dns_resp_soa_i soa_i;
+
+    /*
+    soa_len = __dn_comp("ns1.dnsv2.com.vel3dnsadmin.dnspod.com", 
+            soa_buf, buf_len, NULL, NULL) - 1; 
+            */
+    memcpy(soa_buf, p1, sizeof(p1));
+    soa_len += sizeof(p1);
+    memcpy(soa_buf + soa_len, p2, sizeof(p2));
+    soa_len += sizeof(p2);
+
+    /*
+    pbe32 = (__be32 *)(soa_buf + soa_len);
+    *pbe32        = htonl(0x0808);
+    soa_len += 4;
+    pbe32 = (__be32 *)(soa_buf + soa_len);
+    *pbe32        = htonl(0x0e10);
+    soa_len += 4;
+    pbe32 = (__be32 *)(soa_buf + soa_len);
+    *pbe32        = htonl(0x00b4);
+    soa_len += 4;
+    pbe32 = (__be32 *)(soa_buf + soa_len);
+    *pbe32        = htonl(0x00127500);
+    soa_len += 4;
+    pbe32 = (__be32 *)(soa_buf + soa_len);
+    *pbe32        = htonl(0x00b4);
+    soa_len += 4;
+    */
+
+    //memset(&soa_i, 0, sizeof(soa_i));
+    soa = (struct dns_resp_soa_i *)(soa_buf + soa_len);
+    /*
+    soa_i.sn        = htonl(0x0808);
+    soa_i.ref_int   = htonl(0x0e10);
+    soa_i.re_int    = htonl(0x00b4);
+    soa_i.exp_limit = htonl(0x00127500);
+    soa_i.mini_ttl  = htonl(0x00b4);
+    */
+    soa->sn        = htonl(0x0808);
+    soa->ref_int   = htonl(0x0e10);
+    soa->re_int    = htonl(0x00b4);
+    soa->exp_limit = htonl(0x00127500);
+    soa->mini_ttl  = htonl(0x00b4);
+    //memcpy(soa_buf + soa_len, &soa_i, sizeof(soa_i));
+    //memset(soa_buf + soa_len, 'A', 40);
+    soa_len += sizeof(*soa);
+    //soa_len += 40;
+
+    printk("[%s][%d]------dump soa---soa len:%d--------\n", __func__, __LINE__, soa_len);
+    __dump_data(soa_buf, soa_len);
+    printk("[%s][%d]-----------------\n", __func__, __LINE__);
+
+    return soa_len;
+}
+
 unsigned int bhudns_skb_intercept_handle(
 	unsigned int hooknum,
 	struct sk_buff * skb,
@@ -510,10 +574,16 @@ unsigned int bhudns_skb_intercept_handle(
     char buf[256] = {0};
     struct name_node *node = NULL;
     struct dns_response answer;
+    struct dns_response *r_answer;
     //char *p = NULL;
     //__be32 addr = 0;
     union flag_union flag;
     struct sk_buff *rsp_skb = NULL;
+    char rsp_buf[128 + 256];
+    int  answer_len = 0;
+    int  soa_len = 0;
+    int rsp_len = 0;
+    int need_soa = 0;
 
     if(!bhudns_enable)
         return NF_ACCEPT;
@@ -560,18 +630,63 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
             return NF_ACCEPT;
 
         debug("skb:%p, query for:%s\n", skb, buf);
+        if (strstr(buf, "com.lan") == NULL) {
+            need_soa = 1;
+        }
 
         spin_lock(&bhudns_lock);
         if(!(node = bhudns_match_node(buf)))
             goto unlock_accept;
 
         //send fake response now
+#if 0
         memset(&answer, 0, sizeof(answer));
         answer.name = ntohs(0xc00c);
         answer.type = ntohs(0x01);
         answer.class = ntohs(0x01);
         answer.ttl = 0;
         answer.len = ntohs(4);
+#endif
+        memset(&answer, 0, sizeof(answer));
+        answer.name = ntohs(0xc00c);
+        if (need_soa == 1) {
+            answer.type = ntohs(0x06); /* SOA */
+        } else {
+            answer.type = ntohs(0x01); /* A */
+        }
+        answer.class = ntohs(0x01);
+        answer.ttl = 0;
+        answer.len = ntohs(0); //
+
+        answer_len = sizeof(answer) - sizeof(answer.ip);
+        memcpy(rsp_buf, &answer, answer_len);
+        printk("[%s][%d]------dump answer_len--ans_len:%d---------\n", __func__, __LINE__, answer_len);
+        __dump_data(rsp_buf, rsp_len);
+        printk("[%s][%d]-----------------\n", __func__, __LINE__);
+
+        char soa_buf[256];
+
+        if (need_soa) {
+            soa_len = bhudns_skb_build_soa(soa_buf, sizeof(soa_buf));
+            memcpy(rsp_buf + answer_len, soa_buf, soa_len);
+            //TODO:WHY must 128??
+            memset(rsp_buf + answer_len + soa_len, 'A', 128 - soa_len);
+            soa_len = 0 + 128;
+        } else {
+            memcpy(rsp_buf + answer_len, &(ih->daddr), 4);
+            soa_len = 4;
+        }
+
+
+        r_answer = (struct dns_response *)rsp_buf;
+        r_answer->len = ntohs(soa_len); //
+
+        rsp_len = answer_len + soa_len;
+
+        printk("[%s][%d]------dump rsp--rsp_len:%d---------\n", __func__, __LINE__, rsp_len);
+        __dump_data(rsp_buf, rsp_len);
+        printk("[%s][%d]-----------------\n", __func__, __LINE__);
+        
         if(node->ip){
             answer.ip = htonl(node->ip);
         } else{
@@ -588,18 +703,18 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         flag.bits.ra = 1;
         dh->flag.unit = htons(flag.unit);
         dh->ancount = htons(1);
-        
 
         printk("[%s][%d]----build new pack------\n", __func__, __LINE__);
         rsp_skb = bhudns_skb_new_udp_pack(ih->saddr, ih->daddr, 
                 uh->source, uh->dest, 
                 (unsigned char *)((u8 *)uh + sizeof(struct udphdr)),
                 (ntohs(uh->len) - sizeof(struct udphdr)), 
-                (unsigned char *)&answer,
-                sizeof(answer)
+                (unsigned char *)rsp_buf,
+                (rsp_len)
                 //NULL, 0
                 );
         rsp_skb->dev = skb->dev;
+        //rsp_skb->ip_summed = CHECKSUM_UNNECESSARY;
 
         if (rsp_skb == NULL) {
             return NF_ACCEPT;
@@ -878,7 +993,8 @@ static int __init bhudns_init(void)
     bhudns_add_name_node("auth.wi2o.cn", 0);
     bhudns_add_name_node("u.u", 0);
     bhudns_add_name_node("bhuwifi.com", 0);
-    bhudns_add_name_node("bhuwifi2.com", 0);
+    bhudns_add_name_node("bhuwifi.com.lan", 0);
+    bhudns_add_name_node("bhuwifi2.com.lan", 0);
     spin_unlock(&bhudns_lock);
 
     if(bhudns_add_sysfs(obj)){
