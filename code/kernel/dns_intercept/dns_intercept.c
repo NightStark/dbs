@@ -164,6 +164,16 @@ dns_unreg_hook(DNS_RSP_HOOK hook)
 }
 EXPORT_SYMBOL(dns_unreg_hook);
 
+static inline int _comp_domain_name_len(char *d, int len)
+{
+    int i = 1;
+    while(*d != 0 && i < len) {
+        i++;
+        d++;
+    }
+
+    return i;
+}
 
 static int
 extract_domain_name(char *str, char *name, int maxlen)
@@ -171,10 +181,8 @@ extract_domain_name(char *str, char *name, int maxlen)
     char *p = str;
     char *q = name;
     int len = 0;
-    int dn_len = 0;
     while(*p != 0 && *p < 32) p++;
     while(*p != 0 && len < maxlen){
-        dn_len ++;
         if(*p < 32)
             *q = '.';
         else
@@ -184,7 +192,7 @@ extract_domain_name(char *str, char *name, int maxlen)
         q ++;
     }
     *q = 0;
-    return dn_len;
+    return 0;
 }
 
 #define GETSHORT(s, cp) { \
@@ -619,6 +627,8 @@ unsigned int bhudns_skb_intercept_handle(
     //struct in6_addr v6addr;
     int dn_len = 0;
     char soa_buf[256];
+    __be16 *__dns_qr = NULL;
+    unsigned short dns_qr = 0;
 
 
     if(!bhudns_enable)
@@ -632,7 +642,6 @@ unsigned int bhudns_skb_intercept_handle(
 	ethtype = eh->h_proto;
 	if (skb->protocol==htons(ETH_P_IP)) {
 		ih = ip_hdr(skb);
-		return NF_ACCEPT;
 	} else if (skb->protocol==htons(ETH_P_IPV6)) {
         //__bhudns_skb_intercept_v6(skb, in);
         _is_v6 = 1;
@@ -661,7 +670,7 @@ unsigned int bhudns_skb_intercept_handle(
         uh = (struct udphdr*)(skb_network_header(skb) + offset);
         bhudns_dump_packet((u8 *)uh, skb->len - ((unsigned)uh - (unsigned int)skb->data));
         printk("[%s][%d]source:%d dest:%d\n", __func__, __LINE__, ntohs(uh->source), ntohs(uh->dest));
-        need_soa = 1;
+        //need_soa = 1;
     }
 
     if(uh->dest != htons(53) && uh->source != htons(53)) { //not dns packet
@@ -672,22 +681,31 @@ unsigned int bhudns_skb_intercept_handle(
     flag.unit = ntohs(dh->flag.unit);
     if (uh->dest == htons(53) && flag.bits.qr == 0) {//dns query packet
         debug("got dns query pkt, skb:%p, dev:%s, skb_len:%d, proto:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->dev->name, skb->len, skb->protocol, eh, ih, uh);
-      bhudns_dump_packet(skb->data, skb->len);
-debug("dh->qdcount:%d\n", ntohs(dh->qdcount));
+        bhudns_dump_packet(skb->data, skb->len);
+        debug("dh->qdcount:%d\n", ntohs(dh->qdcount));
         if(ntohs(dh->qdcount) != 1) {//questions should be 1 
             return NF_ACCEPT;
         }
 
-debug("dh->ancount:%d\n", ntohs(dh->ancount));
+        debug("dh->ancount:%d\n", ntohs(dh->ancount));
         if(ntohs(dh->ancount)) //contain answers , maybe it's not a dns packet
             return NF_ACCEPT;
 
-        dn_len = extract_domain_name((char*)dh + sizeof(*dh), buf, sizeof(buf) - 1);
-        if(dn_len == 0)
+        dn_len = _comp_domain_name_len((char*)dh + sizeof(*dh), sizeof(buf) - 1);
+        if(extract_domain_name((char*)dh + sizeof(*dh), buf, sizeof(buf) - 1))
             return NF_ACCEPT;
 
         debug("skb:%p, query for:%s\n", skb, buf);
-        printk("---------skb:%p, query for:%s-----------\n", skb, buf);
+
+        __dns_qr = (char*)dh + sizeof(*dh) + dn_len;
+        dns_qr = ntohs(*__dns_qr);
+
+        printk("------dn_len:%d---skb:%p, query for:%s type=%d-----------\n", 
+                dn_len, skb, buf, dns_qr);
+        if (dns_qr == 0x1c && _is_v6) {
+            //need_soa = 1;
+            //TEST close soa
+        }
         /*
         if (strstr(buf, "com.lan") == NULL) {
             need_soa = 1;
@@ -695,10 +713,9 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         */
 
         spin_lock(&bhudns_lock);
-        /*
+
         if(!(node = bhudns_match_node(buf)))
             goto unlock_accept;
-            */
 
         //send fake response now
 #if 0
@@ -734,7 +751,7 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
             memset(rsp_buf + answer_len + soa_len, 'A', 128 - soa_len);
             soa_len = 0 + 128;
         } else {
-            answer.ip = htonl(0xC0A80101);
+            answer.ip = htonl(0xC0A83E01); //hard code as "192.168.62.1"
             memcpy(rsp_buf + answer_len, &(answer.ip), 4);
             soa_len = 4;
         }
@@ -766,22 +783,36 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         spin_unlock(&bhudns_lock);
 
         flag.bits.qr = 1;
-        flag.bits.aa = 1;
+        if (need_soa || _is_v6) {
+            flag.bits.aa = 0;
+        } else {
+            flag.bits.aa = 1;
+        }
         flag.bits.ra = 1;
         dh->flag.unit = htons(flag.unit);
         dh->ancount = htons(1);
 
         printk("[%s][%d]----build new pack------\n", __func__, __LINE__);
-        //rsp_skb = bhudns_skb_new_udp_pack(_is_v6, ih->saddr, ih->daddr, 
-        rsp_skb = bhudns_skb_new_udp_pack(_is_v6, 0, 0, 
-                uh->source, uh->dest, 
-                (unsigned char *)((u8 *)uh + sizeof(struct udphdr)),
-                (ntohs(uh->len) - sizeof(struct udphdr)), 
-                (unsigned char *)rsp_buf,
-                (rsp_len),
-                //NULL, 0
-                v6hdr
-                );
+        if (!_is_v6) {
+            rsp_skb = bhudns_skb_new_udp_pack(_is_v6, ih->saddr, ih->daddr, 
+                    uh->source, uh->dest, 
+                    (unsigned char *)((u8 *)uh + sizeof(struct udphdr)),
+                    (ntohs(uh->len) - sizeof(struct udphdr)), 
+                    (unsigned char *)rsp_buf,
+                    (rsp_len),
+                    NULL
+                    );
+
+        } else {
+            rsp_skb = bhudns_skb_new_udp_pack(_is_v6, 0, 0, 
+                    uh->source, uh->dest, 
+                    (unsigned char *)((u8 *)uh + sizeof(struct udphdr)),
+                    (ntohs(uh->len) - sizeof(struct udphdr)), 
+                    (unsigned char *)rsp_buf,
+                    (rsp_len),
+                    v6hdr
+                    );
+        }
 
         if (_is_v6) {
         }
