@@ -529,7 +529,7 @@ unsigned int bhudns_skb_build_soa(char *soa_buf, int buf_len)
                  0x6e, 0x73, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x06, 
                  0x64, 0x6e, 0x73, 0x70, 0x6f, 0x64, 0xc0, 0x25};
     //__be32 *pbe32
-    struct dns_resp_soa_i soa_i;
+    //struct dns_resp_soa_i soa_i;
 
     /*
     soa_len = __dn_comp("ns1.dnsv2.com.vel3dnsadmin.dnspod.com", 
@@ -616,7 +616,10 @@ unsigned int bhudns_skb_intercept_handle(
     int offset = 0;
     __be16 frag_off;
     struct ipv6hdr *v6hdr = NULL;
-    struct in6_addr v6addr;
+    //struct in6_addr v6addr;
+    int dn_len = 0;
+    char soa_buf[256];
+
 
     if(!bhudns_enable)
         return NF_ACCEPT;
@@ -669,7 +672,7 @@ unsigned int bhudns_skb_intercept_handle(
     flag.unit = ntohs(dh->flag.unit);
     if (uh->dest == htons(53) && flag.bits.qr == 0) {//dns query packet
         debug("got dns query pkt, skb:%p, dev:%s, skb_len:%d, proto:%d, eh:%p, ih:%p, uh:%p\n", skb, skb->dev->name, skb->len, skb->protocol, eh, ih, uh);
-        bhudns_dump_packet(skb->data, skb->len);
+      bhudns_dump_packet(skb->data, skb->len);
 debug("dh->qdcount:%d\n", ntohs(dh->qdcount));
         if(ntohs(dh->qdcount) != 1) {//questions should be 1 
             return NF_ACCEPT;
@@ -679,7 +682,6 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         if(ntohs(dh->ancount)) //contain answers , maybe it's not a dns packet
             return NF_ACCEPT;
 
-        int dn_len = 0;
         dn_len = extract_domain_name((char*)dh + sizeof(*dh), buf, sizeof(buf) - 1);
         if(dn_len == 0)
             return NF_ACCEPT;
@@ -724,8 +726,6 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
         printk("[%s][%d]------dump answer_len--ans_len:%d---------\n", __func__, __LINE__, answer_len);
         //__dump_data(rsp_buf, rsp_len);
         //printk("[%s][%d]-----------------\n", __func__, __LINE__);
-
-        char soa_buf[256];
 
         if (need_soa) {
             soa_len = bhudns_skb_build_soa(soa_buf, sizeof(soa_buf));
@@ -773,7 +773,7 @@ debug("dh->ancount:%d\n", ntohs(dh->ancount));
 
         printk("[%s][%d]----build new pack------\n", __func__, __LINE__);
         //rsp_skb = bhudns_skb_new_udp_pack(_is_v6, ih->saddr, ih->daddr, 
-        rsp_skb = bhudns_skb_new_udp_pack(_is_v6, NULL, NULL, 
+        rsp_skb = bhudns_skb_new_udp_pack(_is_v6, 0, 0, 
                 uh->source, uh->dest, 
                 (unsigned char *)((u8 *)uh + sizeof(struct udphdr)),
                 (ntohs(uh->len) - sizeof(struct udphdr)), 
