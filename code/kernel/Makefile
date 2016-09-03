@@ -21,7 +21,11 @@ mod-up:
 dns-intercept:                                    
 	@echo ======CC=$(CC)=====
 	make -C $(KDIR) M=$(PWD)/dns_intercept modules
+skbb:                                    
+	@echo ======CC=$(CC)=====
+	make -C $(KDIR) M=$(PWD)/skb modules
 
 clean:
 	make -C $(PWD)/mod_up clean
 	make -C $(PWD)/dns_intercept clean
+	make -C $(PWD)/skb clean
