@@ -1,1 +1,0 @@
-cmd_/mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skbb.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds -s --build-id  -o /mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skbb.ko /mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skbb.o /mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skbb.mod.o

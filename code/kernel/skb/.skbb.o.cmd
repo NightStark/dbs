@@ -1,1 +1,0 @@
-cmd_/mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skbb.o := ld -m elf_i386   -r -o /mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skbb.o /mnt/sda1/langyanjun/work/mydbs/code/kernel/skb/skb_build.o 
