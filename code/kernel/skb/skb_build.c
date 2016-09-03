@@ -20,6 +20,7 @@
 #include <net/tcp.h>
 #include <linux/timer.h>
 #include <linux/version.h>
+#include <linux/inet.h>
 
 #include <asm/io.h>
 #define UP_MSG_PRINTF(fmt, ...) \
@@ -47,6 +48,12 @@ __dump_data(u8 *ptr, int len, const char *info_fmt, ...)
         printk(" %02x", ptr[i]);
     }
     printk("\n************************\n");
+}
+
+__be32
+_str2ip (const char *str)
+{
+	return in_aton(str); /* linux/inet.h */
 }
 
 struct sk_buff *__skb_new_udp_pack(int is_v6,
@@ -199,14 +206,22 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
 
 static int __skb_build_skb(void)
 {
+    __be32 saddr = 0; 
+    __be32 daddr = 0; 
     struct net_device *dev = NULL;
+    char msg_buf[128];
+    int msg_len = 0;
 
     dev = dev_get_by_name(&init_net, "eth0");
     if (NULL == dev) {
-            return -1;
+        return -1;
     }
 
-    //__skb_new_udp_pack();
+    msg_len = snprintf(msg_buf, sizeof(msg_buf), "%s", "this is msg.");
+
+    saddr = _str2ip("192.168.62.1");
+    daddr = _str2ip("127.0.0.1");
+    __skb_new_udp_pack(0, daddr, saddr, 8819,9918, msg_buf, msg_len + 1, NULL, 0, NULL);
 
     return 0;
 }
