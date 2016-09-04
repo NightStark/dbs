@@ -147,11 +147,12 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
             udph->check = CSUM_MANGLED_0;
     } else {
         /* copy from linux kernel: udp_v6_push_pending_frames() */
-        __wsum csum = csum_partial(skb_transport_header(skb),
-                sizeof(struct udphdr), 0);
-        udph->check = csum_ipv6_magic(&(v6hdr->daddr), &(v6hdr->saddr), /* v6hdr's src as rsp_v6hdr's dst*/
-                udph->len, IPPROTO_UDP, csum);
+        __wsum csum = csum_partial(udph, udp_len, 0);
+        udph->check = csum_ipv6_magic(&(v6hdr->saddr), &(v6hdr->daddr), /* v6hdr's src as rsp_v6hdr's dst*/
+                udp_len, IPPROTO_UDP, csum); /* fuck , 这里的udp_len, 之前为什么要填udph->len, udph->len是网络字节序啊啊啊 */
     }
+    if (udph->check == 0)
+        udph->check = CSUM_MANGLED_0;
     
     if (!is_v6) {
         skb_push(skb, sizeof(struct iphdr));
@@ -253,7 +254,8 @@ static int __skb_build_skb_v6(void)
     char msg_buf[128];
     int msg_len = 0;
     struct sk_buff *skb = NULL;
-    unsigned char src_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xB3};
+    //unsigned char src_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xB3};
+    unsigned char src_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xA9};
     //unsigned char dst_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xA9};
     unsigned char dst_mac[6] = {0x00, 0x0C, 0x29, 0xCE, 0x12, 0xE6};
     //00:0C:29:CE:12:E6
@@ -274,7 +276,7 @@ static int __skb_build_skb_v6(void)
     __dump_data(v6hdr.saddr.s6_addr, 16, "v6 src addr");
     in6_pton(v6_daddr_buf, strlen(v6_daddr_buf), v6hdr.daddr.s6_addr, '\0', NULL);
     __dump_data(v6hdr.daddr.s6_addr, 16, "v6 dst addr");
-    skb = __skb_new_udp_pack(1, src_mac, dst_mac, 0, 0, htons(8819), htons(9918), msg_buf, msg_len + 1, NULL, 0, &v6hdr);
+    skb = __skb_new_udp_pack(1, src_mac, dst_mac, 0, 0, htons(8819), htons(41225), msg_buf, msg_len + 1, NULL, 0, &v6hdr);
 
     if (skb == NULL) {
         UP_MSG_PRINTF("build new udp pack failed.");
