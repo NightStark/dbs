@@ -18,8 +18,8 @@ __dump_data(unsigned char *ptr, int len)
     printf("\n");
 }
 
-static unsigned char cbc_key[8] = {'x', '#', '2', 's', 'x', '9', '(', 'x'};
-static unsigned char cbc_iv[8]  = {'s', 'a', 'l', 't', '#', '&', '@', '!'};
+static unsigned char cbc_key[8] = {'0', 'x', '2', '2', '3', '9', '$', '2'};
+static unsigned char cbc_iv[8]  = {'d', 'z', 'u', 'p', '#', '%', '*', 'z'};
 
 static int _des_encrypt(const unsigned char *data, int data_len, unsigned char *buf) 
 {
