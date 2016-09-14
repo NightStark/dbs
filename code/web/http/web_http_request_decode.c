@@ -325,8 +325,8 @@ STATIC ULONG web_http_DecMsgHead(IN CHAR *pucBufLine,
 
 	if (uiRet >= WEB_HTTP_REQHEADER_MAX)
 	{
-		ERR_PRINTF("Dec Msg Header Type failed!");
-		return ERROR_FAILE;
+		ERR_PRINTF("Dec Msg Header Type failed, not do anything for [%s]!", pucBufLine);
+		return ERROR_SUCCESS;
 	}
 
 	switch (uiRet)
@@ -656,7 +656,7 @@ ULONG WEB_http_GetPurenessFileData(IN CHAR    *pucFilePath,
 		/* BUG:但是结构体[pstHHMsg]里面的其他成员没有相应的改变 */
 		if(-1 == ulRet || S_ISDIR(stReqFileStat.st_mode))
 		{
-			ERR_PRINTF("get [%s] stat failed!", pucFilePath);
+			ERR_PRINTF("get [%s] stat failed! redirect to [%s%s]", pucFilePath, g_szHttpWebRootDir, g_szHttpWebErr404Path);
 			sprintf(pucFilePath, "%s%s", g_szHttpWebRootDir, g_szHttpWebErr404Path);
 		}
 		else
