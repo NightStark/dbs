@@ -532,10 +532,15 @@ unsigned int bhudns_skb_build_soa(char *soa_buf, int buf_len)
     int soa_len = 0;
     struct dns_resp_soa_i *soa = NULL;
     char p1[] = {0x03, 0x6e, 0x73, 0x31, 0x05, 0x64, 0x6e, 0x73,
-                 0x76, 0x32, 0xc0, 0x25};
+                 0x76, 0x32, 0xc0, 0x14};
+    //03 6e 73 31 05 64 6e 73 76 32 c0 14
     char p2[] = {0x0e, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x33, 0x64, 
                  0x6e, 0x73, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x06, 
-                 0x64, 0x6e, 0x73, 0x70, 0x6f, 0x64, 0xc0, 0x25};
+                 0x64, 0x6e, 0x73, 0x70, 0x6f, 0x64, 0x03, 0x63,
+                 0x6f, 0x6d, 0xc0, 0x0c};
+    //0e 6c 65 76 65 6c 33 64 6e 73 61 64 6d 69 6e 06
+    //64 6e 73 70 6f 64 03 63  6f 6d c0 0c
+
     //__be32 *pbe32
     //struct dns_resp_soa_i soa_i;
 
@@ -610,6 +615,7 @@ unsigned int bhudns_skb_intercept_handle(
     struct name_node *node = NULL;
     struct dns_response answer;
     struct dns_response *r_answer;
+    struct dns_response  *addrrs;
     //char *p = NULL;
     //__be32 addr = 0;
     union flag_union flag;
@@ -619,6 +625,7 @@ unsigned int bhudns_skb_intercept_handle(
     int  soa_len = 0;
     int rsp_len = 0;
     int need_soa = 0;
+    int need_addrrs = 0;
     int _is_v6 = 0;
     u8 nexthdr = 0;
     int offset = 0;
@@ -702,9 +709,13 @@ unsigned int bhudns_skb_intercept_handle(
 
         printk("------dn_len:%d---skb:%p, query for:%s type=%d-----------\n", 
                 dn_len, skb, buf, dns_qr);
-        if (dns_qr == 0x1c && _is_v6) {
-            //need_soa = 1;
-            //TEST close soa
+        if (_is_v6) {
+            if (dns_qr == 0x1) {
+                need_addrrs = 1;
+            }else if (dns_qr == 0x1c) {
+                need_soa = 1;
+                /////TEST not soa
+            }
         }
         /*
         if (strstr(buf, "com.lan") == NULL) {
@@ -735,7 +746,7 @@ unsigned int bhudns_skb_intercept_handle(
             answer.type = ntohs(0x01); /* A */
         }
         answer.class = ntohs(0x01);
-        answer.ttl = 0;
+        answer.ttl = ntohl(86400);
         answer.len = ntohs(0); //
 
         answer_len = sizeof(answer) - sizeof(answer.ip);
@@ -756,11 +767,26 @@ unsigned int bhudns_skb_intercept_handle(
             soa_len = 4;
         }
 
-
         r_answer = (struct dns_response *)rsp_buf;
-        r_answer->len = ntohs(soa_len); //
+        if (need_soa) {
+            r_answer->len = ntohs(60); //
+        } else {
+            r_answer->len = ntohs(soa_len); //
+        }
 
         rsp_len = answer_len + soa_len;
+
+        if (need_addrrs) {
+            addrrs = (struct dns_response *)(rsp_buf + rsp_len);
+            addrrs->name = ntohs(0xc00c);
+            addrrs->type = ntohs(0x02); /* NS */
+            addrrs->class = ntohs(0x01); /* IN */
+            addrrs->ttl = ntohl(86400);
+            addrrs->len = ntohs(2); //
+            addrrs->ip = ntohl(0xc00c0000);
+            rsp_len += sizeof(struct dns_response);
+            rsp_len -= 2;
+        }
 
         printk("[%s][%d]------dump rsp--rsp_len:%d---------\n", __func__, __LINE__, rsp_len);
         __dump_data(rsp_buf, rsp_len);
@@ -777,20 +803,25 @@ unsigned int bhudns_skb_intercept_handle(
                 answer.ip = htonl(answer.ip);
             } else {
                 //answer.ip = htonl(answer.ip);
-                answer.ip = htonl(0xC0A80101);
+                //answer.ip = htonl(0xC0A80101); /* 192.168.1.1 */
+                answer.ip = htonl(0xC0A83E01); /* 192.168.62.1 */
             }
         }
         spin_unlock(&bhudns_lock);
 
         flag.bits.qr = 1;
-        if (need_soa || _is_v6) {
-            flag.bits.aa = 0;
-        } else {
-            flag.bits.aa = 1;
-        }
+        flag.bits.aa = 1;
         flag.bits.ra = 1;
         dh->flag.unit = htons(flag.unit);
-        dh->ancount = htons(1);
+        if (need_soa) {
+            dh->ancount = htons(0);
+            dh->nscount= htons(1);
+        } else {
+            dh->ancount = htons(1);
+        }
+        if (need_addrrs) {
+            dh->nscount= htons(1);
+        }
 
         printk("[%s][%d]----build new pack------\n", __func__, __LINE__);
         if (!_is_v6) {
