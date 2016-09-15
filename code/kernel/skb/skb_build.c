@@ -184,7 +184,7 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
         memcpy(&(rsp_v6hdr->saddr), &(v6hdr->daddr), sizeof(struct in6_addr));
         rsp_v6hdr->payload_len = (udph->len);
         printk("[%s][%d]-ipv6---set ns make on skb-----\n",  __func__, __LINE__);
-        skb->ns_mark = 1;
+        //skb->ns_mark = 1;
     }
 
     printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
