@@ -57,6 +57,8 @@ _str2ip (const char *str)
 }
 
 struct sk_buff *__skb_new_udp_pack(int is_v6,
+                                        unsigned char *smac,
+                                        unsigned char *dmac,
                                         __be32 daddr,
                                         __be32 saddr,
                                         __be16 dst,
@@ -145,11 +147,12 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
             udph->check = CSUM_MANGLED_0;
     } else {
         /* copy from linux kernel: udp_v6_push_pending_frames() */
-        __wsum csum = csum_partial(skb_transport_header(skb),
-                sizeof(struct udphdr), 0);
-        udph->check = csum_ipv6_magic(&(v6hdr->daddr), &(v6hdr->saddr), /* v6hdr's src as rsp_v6hdr's dst*/
-                udph->len, IPPROTO_UDP, csum);
+        __wsum csum = csum_partial(udph, udp_len, 0);
+        udph->check = csum_ipv6_magic(&(v6hdr->saddr), &(v6hdr->daddr), /* v6hdr's src as rsp_v6hdr's dst*/
+                udp_len, IPPROTO_UDP, csum); /* fuck , 这里的udp_len, 之前为什么要填udph->len, udph->len是网络字节序啊啊啊 */
     }
+    if (udph->check == 0)
+        udph->check = CSUM_MANGLED_0;
     
     if (!is_v6) {
         skb_push(skb, sizeof(struct iphdr));
@@ -157,7 +160,7 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
         printk("[%s][%d]----skb len:%d-----\n",  __func__, __LINE__, skb->len);
         iph = ip_hdr(skb);
         memset(iph, 0, sizeof(struct iphdr));
-        iph->protocol = IPPROTO_UDP;
+        iph->protocol = IPPROTO_UDP; /* UDP */
         iph->version = 4;
         iph->ihl = 5;
         //put_unaligned(0x45, (unsigned char *)iph);
@@ -180,8 +183,11 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
         printk("[%s][%d]-ipv6---skb len:%d-----\n",  __func__, __LINE__, skb->len);
         rsp_v6hdr = ipv6_hdr(skb);
         memcpy(rsp_v6hdr, v6hdr, sizeof(struct ipv6hdr));
-        memcpy(&(rsp_v6hdr->daddr), &(v6hdr->saddr), sizeof(struct in6_addr));
-        memcpy(&(rsp_v6hdr->saddr), &(v6hdr->daddr), sizeof(struct in6_addr));
+        //memcpy(&(rsp_v6hdr->daddr), &(v6hdr->saddr), sizeof(struct in6_addr));
+        //memcpy(&(rsp_v6hdr->saddr), &(v6hdr->daddr), sizeof(struct in6_addr));
+        rsp_v6hdr->version     = 6;
+        rsp_v6hdr->hop_limit   = 64;
+        rsp_v6hdr->nexthdr     = IPPROTO_UDP;
         rsp_v6hdr->payload_len = (udph->len);
         printk("[%s][%d]-ipv6---set ns make on skb-----\n",  __func__, __LINE__);
         //skb->ns_mark = 1;
@@ -192,10 +198,15 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
     skb_reset_mac_header(skb);                           
     printk("[%s][%d]----skb len:%d-----\n", 
             __func__, __LINE__, skb->len);
-    skb->protocol = eth_hdr(skb)->h_proto;               
-    eh->h_proto = eth_hdr(skb)->h_proto;                  
-    memcpy(eh->h_source, eth_hdr(skb)->h_dest, ETH_ALEN); 
-    memcpy(eh->h_dest, eth_hdr(skb)->h_source, ETH_ALEN); 
+    if (!is_v6) {
+        skb->protocol = htons(ETH_P_IP);               
+        eh->h_proto = htons(ETH_P_IP);                  
+    } else {
+        skb->protocol = htons(ETH_P_IPV6);               
+        eh->h_proto = htons(ETH_P_IPV6);                  
+    }
+    memcpy(eh->h_source, smac, ETH_ALEN); 
+    memcpy(eh->h_dest,   dmac, ETH_ALEN); 
     printk("[%s][%d]----pack set over. ssp skb len:%d-----\n", 
             __func__, __LINE__, skb->len);
     __dump_data(skb->data, skb->len, "all pkt");
@@ -204,31 +215,83 @@ struct sk_buff *__skb_new_udp_pack(int is_v6,
     return skb;
 }
 
-static int __skb_build_skb(void)
+static int __skb_build_skb_v4(void)
 {
     __be32 saddr = 0; 
     __be32 daddr = 0; 
     struct net_device *dev = NULL;
     char msg_buf[128];
     int msg_len = 0;
+    struct sk_buff *skb = NULL;
+    unsigned char src_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xB3};
+    //unsigned char dst_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xA9};
+    unsigned char dst_mac[6] = {0x00, 0x0C, 0x29, 0xCE, 0x12, 0xE6};
+    //00:0C:29:CE:12:E6
 
     dev = dev_get_by_name(&init_net, "eth0");
     if (NULL == dev) {
         return -1;
     }
 
-    msg_len = snprintf(msg_buf, sizeof(msg_buf), "%s", "this is msg.");
+    msg_len = snprintf(msg_buf, sizeof(msg_buf), "%s", "this is a msg.");
 
-    saddr = _str2ip("192.168.62.1");
-    daddr = _str2ip("127.0.0.1");
-    __skb_new_udp_pack(0, daddr, saddr, 8819,9918, msg_buf, msg_len + 1, NULL, 0, NULL);
+    saddr = _str2ip("192.168.1.1");
+    daddr = _str2ip("192.168.1.120");
+    skb = __skb_new_udp_pack(0, src_mac, dst_mac, daddr, saddr, htons(8819), htons(9918), msg_buf, msg_len + 1, NULL, 0, NULL);
+    if (skb == NULL) {
+        UP_MSG_PRINTF("build new udp pack failed.");
+        return -1;
+    }
+    skb->dev = dev;
+    dev_queue_xmit(skb);
+
+    return 0;
+}
+
+static int __skb_build_skb_v6(void)
+{
+    struct net_device *dev = NULL;
+    char msg_buf[128];
+    int msg_len = 0;
+    struct sk_buff *skb = NULL;
+    //unsigned char src_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xB3};
+    unsigned char src_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xA9};
+    //unsigned char dst_mac[6] = {0x00, 0x0C, 0x29, 0xFD, 0x87, 0xA9};
+    unsigned char dst_mac[6] = {0x00, 0x0C, 0x29, 0xCE, 0x12, 0xE6};
+    //00:0C:29:CE:12:E6
+    struct ipv6hdr v6hdr;
+    //char v6_addr[64];
+    char v6_saddr_buf[] = "2001:89:66:55::1";
+    char v6_daddr_buf[] = "2001:89:66:55:20c:29ff:fece:12e6";
+
+    dev = dev_get_by_name(&init_net, "eth0");
+    if (NULL == dev) {
+        return -1;
+    }
+
+    msg_len = snprintf(msg_buf, sizeof(msg_buf), "%s", "this is a msg.");
+
+    memset(&v6hdr, 0, sizeof(struct ipv6hdr));
+    in6_pton(v6_saddr_buf, strlen(v6_saddr_buf), v6hdr.saddr.s6_addr, '\0', NULL);
+    __dump_data(v6hdr.saddr.s6_addr, 16, "v6 src addr");
+    in6_pton(v6_daddr_buf, strlen(v6_daddr_buf), v6hdr.daddr.s6_addr, '\0', NULL);
+    __dump_data(v6hdr.daddr.s6_addr, 16, "v6 dst addr");
+    skb = __skb_new_udp_pack(1, src_mac, dst_mac, 0, 0, htons(8819), htons(41225), msg_buf, msg_len + 1, NULL, 0, &v6hdr);
+
+    if (skb == NULL) {
+        UP_MSG_PRINTF("build new udp pack failed.");
+        return -1;
+    }
+    skb->dev = dev;
+    dev_queue_xmit(skb);
 
     return 0;
 }
 
 static int __init skb_build_init(void)
 {
-    __skb_build_skb();
+    //__skb_build_skb_v4();
+    __skb_build_skb_v6();
     UP_MSG_PRINTF("init success.");
 
     return 0;
