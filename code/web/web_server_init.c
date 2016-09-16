@@ -216,7 +216,8 @@ STATIC ULONG web_server_AcceptHttp(IN INT iListenFd)
 		ERR_PRINTF("thread create failed!");
 	}
 #endif
-    iRet = Thread_server_CreateWithEpQMsg();
+    iRet = Thread_server_CreateWithEpQMsg( );
+
 
 	DBG_THRD_NAME_REG(iRet, "WServerWork-%d", iRet);
 
