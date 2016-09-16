@@ -206,6 +206,7 @@ STATIC ULONG web_server_AcceptHttp(IN INT iListenFd)
 		return ERROR_FAILE;
 	}
 
+#if 0
 	/* 每个进程在当前环境智能创建380个，待升级为调度方案 */
 	iRet = Thread_server_CreatWithMain(THREAD_TYPE_WEB_SERVER_WROK,
   									   web_server_ReqAccept,
@@ -214,6 +215,8 @@ STATIC ULONG web_server_AcceptHttp(IN INT iListenFd)
 	{
 		ERR_PRINTF("thread create failed!");
 	}
+#endif
+    iRet = Thread_server_CreateWithEpQMsg();
 
 	DBG_THRD_NAME_REG(iRet, "WServerWork-%d", iRet);
 

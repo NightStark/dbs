@@ -20,3 +20,15 @@
 #include <ns_msg_client_link.h>
 #include <ns_msg_server_link.h>
 #include <ns_msg.h>
+
+typedef union link_info 
+{
+    INT              iSockFd;
+    MSG_SRV_LINK_ST *pstSrvLink;
+    MSG_CLT_LINK_ST *pstMsgCltLink;
+}LINK_INFO_UN;
+typedef struct msg_send_info
+{
+	INT              iThreadID; /* thread id */
+    LINK_INFO_UN     unLinkInfo; 
+}MSG_SEND_INFO;
