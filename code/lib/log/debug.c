@@ -472,10 +472,21 @@ VOID inline Dbg_print(IN DBG_TYPE_E enDbgType,
  
  }
 
+#define NS_LOG_DIR "log"
 void Dbg_Print_Log(const char *pcFileName, char *pcChar, unsigned long ulLen)
 {												
+	int iRet = 0;
 	int dbg_fd = 0;		
 	char szFileDir[256] = {0};
+
+	iRet = access(NS_LOG_DIR, F_OK | R_OK | W_OK | X_OK);
+	if (0 != iRet) {
+		iRet = mkdir(NS_LOG_DIR, 0775);
+		if (0 != iRet) {
+			printf("mkdir [%s] failed.\n", NS_LOG_DIR);
+			return;
+		}
+	}
 
 	sprintf(szFileDir, "log//%s", pcFileName);
 	dbg_fd = open((szFileDir), O_CREAT|O_TRUNC|O_RDWR, 664);

@@ -88,9 +88,9 @@ STATIC INT web_server_CreateSocket(VOID)
 }
 
 /*****************************************************************************
- Prototype    : web_server_ReqAccept
+ Prototype    : _web_server_HttpReq_recv
  Description  : 接收 http连接请 求发来的数据
- Input        : VOID *arg  accept socket fd
+ Input        : INT connfd  accept socket fd
  Output       : None
  Return Value : VOID
  Calls        : 
@@ -102,15 +102,12 @@ STATIC INT web_server_CreateSocket(VOID)
     Modification : Created function
 
 *****************************************************************************/
-STATIC VOID *web_server_ReqAccept(VOID *arg)
+STATIC ULONG _web_server_HttpReq_recv(IN INT connfd)
 {
 	ULONG ulRet;
-	INT   connfd;
 	CHAR  buf[MAXLINE];
 	ssize_t ulHttpHeadSize = 0;
 	WEB_HTTP_REQMSGINFO_S stHttpReqMsgInfo;
-
-	connfd = (INT)(LONG)arg;
 
 	mem_set0(&stHttpReqMsgInfo, sizeof(WEB_HTTP_REQMSGINFO_S));
 
@@ -121,7 +118,7 @@ STATIC VOID *web_server_ReqAccept(VOID *arg)
 	pstThrd = Thread_server_GetCurrent();
 	DBGASSERT(NULL != pstThrd);
 #endif
-	SHOW_PRINTF("Thread[%s] is started !\n"
+	SHOW_PRINTF("Thread[%s] is handled !\n"
 	            "           Tid:%-3d ptid:0%0X TType:%-3d", 
 				DBG_THRD_NAME_GET(pstThrd->iThreadID),
 				pstThrd->iThreadID, 
@@ -133,7 +130,7 @@ STATIC VOID *web_server_ReqAccept(VOID *arg)
 	if (-1 == ulHttpHeadSize)
 	{
 		ERR_PRINTF("Reqest Accept Read Failed(%s)!", strerror(errno));
-		return (VOID *)-1;
+		return ERROR_FAILE;
 	}
 	
 	DBG_PRINT_LOG("reqHead.dat", buf, ulHttpHeadSize);
@@ -169,7 +166,29 @@ STATIC VOID *web_server_ReqAccept(VOID *arg)
 
 	close(connfd);
 
-	return (VOID *)0;
+	return ERROR_SUCCESS;
+}
+
+ULONG Web_server_accept_http_init_cb(VOID *args)
+{
+	MSG_PRINTF("init thread success!");
+
+	return ERROR_SUCCESS;
+}
+
+/* do receive http request data */
+ULONG web_server_HttpReq_recv(IN UINT events, IN VOID *arg)
+{
+	ULONG ulErrCode = ERROR_SUCCESS;
+	THREAD_EPOLL_EVENTS_S *pstThrdEpEvents = NULL;
+
+	pstThrdEpEvents = (THREAD_EPOLL_EVENTS_S *)arg;
+	if ((events & EPOLLIN) && (pstThrdEpEvents->uiEvents & EPOLLIN))
+	{
+		ulErrCode = _web_server_HttpReq_recv(pstThrdEpEvents->iEventFd);
+	}
+
+	return ulErrCode;
 }
 
 /*****************************************************************************
@@ -190,14 +209,17 @@ STATIC VOID *web_server_ReqAccept(VOID *arg)
 *****************************************************************************/
 STATIC ULONG web_server_AcceptHttp(IN INT iListenFd)
 {
-	INT iRet = 0;
+	//INT iRet  = 0;
+	INT ulRet = 0;
 	INT connfd;
 	socklen_t cliaddr_len;
 	struct sockaddr_in  cliaddr;
+	THREAD_INFO_S *pstThrdInfo = NULL;
 
 	MSG_PRINTF("ACCEPT(%d)....", iListenFd);
 	cliaddr_len = sizeof(struct sockaddr_in);
 
+	/* accept http request */
 	memset(&cliaddr, 0, sizeof(struct sockaddr_in));
 	connfd = accept(iListenFd, (struct sockaddr *)&cliaddr, &cliaddr_len);
 	if(-1 == connfd)
@@ -215,13 +237,26 @@ STATIC ULONG web_server_AcceptHttp(IN INT iListenFd)
 	{
 		ERR_PRINTF("thread create failed!");
 	}
-#endif
-    iRet = Thread_server_CreateWithEpQMsg( );
-
-
 	DBG_THRD_NAME_REG(iRet, "WServerWork-%d", iRet);
+#endif
 
-	return ERROR_SUCCESS;
+
+
+	/* recv data will do in another thread */
+	pstThrdInfo = Thread_server_GetByThreadType(THREAD_TYPE_WEB_SERVER_WROK_RECV);
+	if (NULL == pstThrdInfo) {
+		ERR_PRINTF("get thread by type failed!");
+		return ERROR_FAILE;
+	}
+
+	//TODO: need set noblock?
+
+	ulRet = Thread_server_EpollAdd(pstThrdInfo->iThreadID,
+								   connfd,
+								   EPOLLIN|EPOLLET,
+								   web_server_HttpReq_recv);
+
+	return ulRet;
 		
 }
 
@@ -358,6 +393,12 @@ INT Web_server_init(VOID)
 	}
 	DBG_THRD_NAME_REG(iThreadID, "Web-Server");
 	
+	iThreadID = Thread_server_CreateWithEpQMsg(Web_server_accept_http_init_cb,
+											   NULL,
+											   THREAD_TYPE_WEB_SERVER_WROK_RECV,
+											   web_server_QueMsgRecv);
+	DBG_THRD_NAME_REG(iThreadID, "Web-Server-Work-recv.");
+
 	return 0;
 }
 
