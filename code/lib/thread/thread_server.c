@@ -1532,6 +1532,11 @@ STATIC ULONG thread_server_QueMsg_SendAndWait(IN  INT iDestThrdId,
         return ERROR_FAILE;
 	}
 	
+	if (pstSrcThrdInfo->iThreadID == pstDestThrdInfo->iThreadID) {
+		ERR_PRINTF("src thread id == dest thread id == (%d) !", iDestThrdId);
+		return ERROR_FAILE;
+	}
+
 	if (BOOL_TRUE != pstDestThrdInfo->stThrdQueMsgInfo.bThrdQueMsgIsOn)
 	{
 	    ERR_PRINTF("This Thread(%s)[%d] is Not Support <Thread Queue Message>!",

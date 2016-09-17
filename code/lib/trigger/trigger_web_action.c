@@ -116,7 +116,7 @@ QUEMSG_TRIGGER_FUN g_TriggerWebActionList[THRD_QUEMSG_TYPE_WEB_EVENT_MAX] =
 	[WET_CTRL_DISCONN_SER] = quemsg_trigeer_WebAction_ControlAsk_DisConnSever,
 };
 
-ULONG triiger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstThrdQueMsg)
+ULONG trigger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstThrdQueMsg)
 {
     ULONG ulRet = ERROR_SUCCESS;
 	WEB_ACTION_REQ_S		 *pstWebActionReq;
@@ -166,6 +166,7 @@ ULONG triiger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstTh
 	return ulRet;
 }
 
+
 ULONG Trigger_Handle_Msg(IN INT iSrcThrdId, 
  						 IN const THREAD_QUEMSG_DATA_S *pstThrdQueMsg)
 {
@@ -173,7 +174,7 @@ ULONG Trigger_Handle_Msg(IN INT iSrcThrdId,
 
 	DBGASSERT(NULL != pstThrdQueMsg);
 
-	ulReg = triiger_proc_Event(iSrcThrdId, pstThrdQueMsg);
+	ulReg = trigger_proc_Event(iSrcThrdId, pstThrdQueMsg);
 
 	return ulReg;
 }

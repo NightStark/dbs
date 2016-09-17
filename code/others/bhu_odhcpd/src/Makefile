@@ -11,8 +11,9 @@ CFLAGS += -D_GNU_SOURCE
 LIBS=-lresolv
 
 #CC=mips-linux-gcc
-CC=mipsel-openwrt-linux-gcc
+#CC=mipsel-openwrt-linux-gcc
 #CC=gcc
+CC=i486-openwrt-linux-gcc
 odhcpd:$(objs)
 	$(CC) $(objs) $(CFLAGS) $(LIBS) -o odhcpd
 #mips-linux-gcc dhcpv4.c  dhcpv6.c  dhcpv6-ia.c  ndp.c  odhcpd.c  router.c  uloop.c utils.c  md5.c usock.c blob.c blobmsg.c config_bhu.c ustream.c ustream-fd.c -std=gnu99  -Wall -o dhcpd -lresolv

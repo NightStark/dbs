@@ -12,6 +12,7 @@
 /* 服务器网页文件放置根目录 */
 STATIC CHAR g_szHttpWebRootDir[WEB_HTTP_REQ_ROOTDIR_BUF_LEN_MAX] = "./web/dir";
 STATIC CHAR g_szHttpWebErr404Path[] = "/error/404.html";
+STATIC CHAR g_szHttpWebIndexPath[]  = "/index.html";
 
 WEB_HTTP_FILETYPE_S g_aucHttpReqFileTypeList[] = {
 	{0,"html", "text/html"},
@@ -641,6 +642,11 @@ ULONG WEB_http_GetPurenessFileData(IN CHAR    *pucFilePath,
 	
 	struct stat stReqFileStat;
 
+	DBGASSERT(NULL != pucFilePath);
+	DBGASSERT(NULL != pcRespBUF);
+	DBGASSERT(NULL != puiReapBufLen);
+	DBGASSERT(0    != *puiReapBufLen);
+
 	mem_set0(&stReqFileStat, sizeof(struct stat));
 
 	/* 获取文件大小 */
@@ -650,6 +656,12 @@ ULONG WEB_http_GetPurenessFileData(IN CHAR    *pucFilePath,
 		{
 			return ERROR_FAILE;
 		}
+
+		if (pucFilePath[0] == '\0') {
+			MSG_PRINTF("[%s] is empty ! redirect to [%s%s]", pucFilePath, g_szHttpWebRootDir, g_szHttpWebIndexPath);
+			sprintf(pucFilePath, "%s%s", g_szHttpWebRootDir, g_szHttpWebIndexPath);
+		}
+
 		ulRet = stat(pucFilePath, &stReqFileStat);
 
 		/* 指定文件不存在或为目录，重定向到 error/404.html */
