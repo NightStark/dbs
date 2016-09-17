@@ -351,8 +351,7 @@ char is_all_num (char * puc)
 	while ('\0' != *puc)
 	{
 		if(*puc < '0' || *puc > '9')
-		return 0;
-
+			return 0;
 		puc++;
 	}
 	
@@ -406,6 +405,87 @@ stripwhite (char *string)
 
 	return s;
 }
+/* 在@src中查找@d
+ * @src可能不是字符串(没有'\0'), 但@d一定要是个字符串(以'\0'结尾)
+ * @max 指定@src的长度。
+ * */
+char *ns_strstr2(const char *src, const char *d, int max)
+{
+    int l2;
+    char *s = (char*)src;
+    int i = 0;
 
+    l2 = strlen(d);
+    if (!l2)
+        return (char *)s;
+    while(*s && (s - src) <= (max - l2)){
+        for(i = 0; i < l2; i ++){
+            if(s[i] != d[i])
+                break;
+        }
+        if(i == l2)
+            return s;
+        s ++;
+    }
+    return NULL;
+}
+
+/* copy @tt中@a之后@b之前的数据到@buf中，返回@b后的地址
+ * 如果@a == NULL:则copy从@tt到@b
+ * */
+const char * ns_get_msg_of_A2B(const char *tt, int tt_len,
+                                        char *buf, int buf_len,
+                                        const char *a,
+                                        const char *b)
+{
+    int len = 0;
+    int str_len = 0;
+    const char *p = NULL, *p1 = NULL;
+    int skip_a_len = 0;
+    int skip_b_len = 0;
+
+    if (NULL == tt  || tt_len  <= 0 ||
+        NULL == buf || buf_len <= 0 ||
+        NULL == b) {
+        return NULL;
+    }
+
+    if (NULL != a) {
+        skip_a_len = strlen(a);
+        p = ns_strstr2(tt, a, tt_len);
+    } else {
+        a = tt;
+        p = tt;
+    }
+    skip_b_len = strlen(b);
+
+    //p = ns_strstr2(tt, a, tt_len);
+    if (NULL != p) {
+        p  += skip_a_len; /* skip "<" */
+        len = tt_len - skip_a_len;
+        p1 = p;
+        p = ns_strstr2(p1, b, len);
+        if (NULL != p) {
+            str_len = ((p - p1) >= buf_len) ? (buf_len - 1) : (p - p1);
+            strncpy(buf, p1, str_len);
+            buf[str_len + 1] = 0;
+            return p + skip_b_len; /* skip '>'*/
+        }
+    }
+    return NULL;
+}
+
+/* copy @tt中@tt之后@b之前的数据到@buf中，返回@b后的地址  */
+const char * ns_get_msg_of_P2B(const char *tt, int tt_len,
+                                        char *buf, int buf_len,
+                                        const char *b)
+{
+    return ns_get_msg_of_A2B(tt, tt_len, buf, buf_len, NULL, b);
+}
+
+const char * ns_get_msg_of_ltgt(const char *tt, int tt_len, char *buf, int buf_len)
+{
+    return ns_get_msg_of_A2B(tt, tt_len, buf, buf_len, "<", ">");
+}
 #endif //__STRING_C__
 

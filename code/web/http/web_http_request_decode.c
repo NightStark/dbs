@@ -104,6 +104,7 @@ STATIC CHAR const *g_WebHttpReqHeaderInfoList[]={
 	[WEB_HTTP_REQHEADER_USER_AGENT] 	 = "User-Agent",
 	[WEB_HTTP_REQHEADER_ACCEPT_ENCODING] = "Accept-Encoding",
 	[WEB_HTTP_REQHEADER_CONTENT_TYPE] 	 = "Content-Type",
+	[WEB_HTTP_REQHEADER_CONTENT_LEN] 	 = "Content-Length",
 	[WEB_HTTP_REQHEADER_HOST] 			 = "Host",
 	[WEB_HTTP_REQHEADER_DNT] 			 = "DNT",
 	[WEB_HTTP_REQHEADER_CONNECTION] 	 = "Connection",
@@ -380,6 +381,13 @@ STATIC ULONG web_http_DecMsgHead(IN CHAR *pucBufLine,
 			pstReqMsgHead->uiConnection = 0;
 			break;
 		}
+		case WEB_HTTP_REQHEADER_CONTENT_LEN:
+			if (0 == is_all_num(pucValueBuf)) {
+				ERR_PRINTF("Invalid content length:%s", pucValueBuf);
+				return ERROR_FAILE;
+			}
+			pstReqMsgHead->uiContentLen = atoi(pucValueBuf);
+			break;
 		default:
 		{
 			WARN_PRINTF("I have not support this [%s]", 
@@ -467,17 +475,46 @@ STATIC ULONG web_http_DecLine(IN CHAR *pucBufLine,
     Modification : Created function
 
 *****************************************************************************/
-STATIC ULONG WEB_http_ProcSubmitMsg(IN UINT SMsgBufLen,
+STATIC INT WEB_http_ProcSubmitMsg(IN UINT SMsgBufLen,
 							 	    IN const CHAR *pucSMsgBuf, 
 						            OUT WEB_HTTP_REQSUBMITDATA_S *ppstSMsg)
 {
 	//ULONG ulP = 0;
 	//ULONG ulNP = 0;
 	//ULONG ulVP = 0;
-	ULONG ulNumOfSMsg = 0;
+	INT iNumOfSMsg = 0;
+
+	CHAR *pcStart  = NULL;
+	CHAR *pcEnd    = NULL;
+	CHAR *pcE      = NULL;
+
+	pcStart = pucSMsgBuf;
+
+	while((pcStart - pucSMsgBuf) < SMsgBufLen) {
+		pcEnd   = ns_strstr2(pcStart, "&", SMsgBufLen);
+		if (NULL == pcEnd) {
+			MSG_PRINTF("end of submit data.");
+			break;
+		}
+
+		pcE = ns_get_msg_of_P2B(pcStart, (pcEnd - pcStart),
+				ppstSMsg->pcSMName, sizeof(ppstSMsg->pcSMName),
+				"=");
+		if (NULL == pcE) {
+			ERR_PRINTF("Invalid submit line data!");
+			return -1;
+		}
+
+		snprintf(ppstSMsg->pcSMValue, (pcEnd - pcE + 1), "%s", pcE);
+		iNumOfSMsg++;
+		ppstSMsg++;
+		MSG_PRINTF("------------------");
+
+		pcStart = pcEnd + 1;
+	}
+
 
 	/*
-	
 	for(ulP = 0; (0 != *(pucSMsgBuf + ulP)) && (ulP < SMsgBufLen) ;)
 	{
 		for(ulNP = 0; 
@@ -514,7 +551,7 @@ STATIC ULONG WEB_http_ProcSubmitMsg(IN UINT SMsgBufLen,
 	}
 	*/
 	
-	return ulNumOfSMsg;
+	return iNumOfSMsg;
 	
 }
 
@@ -563,7 +600,10 @@ ULONG WEB_http_DecHttpReqMsg(IN CHAR *pucBuf,
 	UINT   uiLineNum 	 = 0;
 	ULONG  ulCutOffP 	 = 0;
 	CHAR  *pucBufPre 	 = NULL;
-	ULONG  ulNumOfSubMsg = 0;
+	CHAR  *pucStart      = NULL;
+	INT   ilNumOfSubMsg = 0;
+
+	pucStart  = pucBuf;
 	pucBufPre = pucBuf;
 
 	/* 逐行解析请求报文 */
@@ -571,11 +611,6 @@ ULONG WEB_http_DecHttpReqMsg(IN CHAR *pucBuf,
 	{
 		if (*(USHORT*)(pucBuf) == 0x0A0D)
 		{
-			if (*(UINT*)(pucBuf) == 0x0A0D0A0D)
-			{
-				MSG_PRINTF("Req head is end!");
-				break;
-			}
 			*(USHORT*)pucBuf = 0x0;
 			MSG_PRINTF(pucBufPre);
 			ulRet = web_http_DecLine(pucBufPre,uiLineNum,pstHttpReqMsgInfo);
@@ -586,14 +621,21 @@ ULONG WEB_http_DecHttpReqMsg(IN CHAR *pucBuf,
 			}
 			
 			pucBuf    += 2;
-			ulCutOffP += 2;
+			ulCutOffP += 2; /* 跳过 0x0A0D  */
 			pucBufPre = pucBuf;
 			uiLineNum++;
+
+			/* \r\n\r\n */
+			if (*(USHORT*)(pucBuf) == 0x0A0D)
+			{
+				MSG_PRINTF("Req head is end!");
+				break;
+			}
 		}
 	}
 
-	pucBuf    += 4;
-	ulCutOffP += 4; /* 跳过 0x0A0D0A0D  */
+	pucBuf    += 2;
+	ulCutOffP += 2; /* 跳过 0x0A0D  */
 	
 	/* 解析报文头中携带的提交信息 */
 	switch (pstHttpReqMsgInfo->stHttpReqLine.uiReqMethod)
@@ -605,12 +647,20 @@ ULONG WEB_http_DecHttpReqMsg(IN CHAR *pucBuf,
 		}
 		case HTTP_REQ_METHOD_POST:
 		{
-			ulNumOfSubMsg = WEB_http_ProcSubmitMsg(ulBufLen - ulCutOffP,
+			MSG_PRINTF("content len:%d, ulBufLen - ulCutOffP = %d",
+					pstHttpReqMsgInfo->stHttpReqMsgHead.uiContentLen,
+					ulBufLen - ulCutOffP);
+			ilNumOfSubMsg = WEB_http_ProcSubmitMsg(ulBufLen - ulCutOffP,
 												   pucBuf,
 												   pstHttpReqMsgInfo->pstHttpReqSubmitData);
-			pstHttpReqMsgInfo->ucSMCnt = ulNumOfSubMsg;
+			if (ilNumOfSubMsg < 0) {
+				ERR_PRINTF("proc submit msg failed.");
+				return ERROR_FAILE;
+			}
+
+			pstHttpReqMsgInfo->ucSMCnt = ilNumOfSubMsg;
 			UINT uiII = 0;
-			for(uiII = 0; uiII < ulNumOfSubMsg; uiII++)
+			for(uiII = 0; uiII < ilNumOfSubMsg; uiII++)
 			{
 				MSG_PRINTF("[%s] = [%s]", 
 							pstHttpReqMsgInfo->pstHttpReqSubmitData[uiII].pcSMName,

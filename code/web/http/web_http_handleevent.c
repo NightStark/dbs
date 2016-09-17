@@ -98,7 +98,7 @@ ULONG web_http_AskToActionThrd(IN WEB_HTTP_REQMSGINFO_S *pstWebHttpReqMsgInfo,
 
 	/* 初始化接收消息的结构体 */
 	mem_set0(&stThrdQueMsgResponse, sizeof(THREAD_QUEMSG_DATA_S));
-	/* 当前线程不支持EPOLL事件所以要等待Action线程的回复 */
+	///* 当前线程不支持EPOLL事件所以要等待Action线程的回复 */
 	ulRet = THREAD_server_QueMsg_SendWithResp(pstThrd->iThreadID,&(stThrdQueMsg),
 								      		  &iSrcThrdId,
 								      		  &stThrdQueMsgResponse);

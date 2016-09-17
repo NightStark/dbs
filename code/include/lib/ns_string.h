@@ -34,5 +34,15 @@ char *stripwhite (char *string);
 #define _isblank(c) (((c) == ' ') || ((c) == '\t') || ((c) == '\n') || ((c) == '\r'))
 #endif
 
+char *ns_strstr2(const char *src, const char *d, int max);
+const char * ns_get_msg_of_A2B(const char *tt, int tt_len,
+                                        char *buf, int buf_len,
+                                        const char *a,
+                                        const char *b);
+const char * ns_get_msg_of_P2B(const char *tt, int tt_len,
+                                        char *buf, int buf_len,
+                                        const char *b);
+const char * ns_get_msg_of_ltgt(const char *tt, int tt_len, char *buf, int buf_len);
+
 #endif //__STRING_C_H__
 
