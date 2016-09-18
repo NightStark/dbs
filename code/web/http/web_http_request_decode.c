@@ -305,7 +305,7 @@ STATIC ULONG web_http_DecMsgHead(IN CHAR *pucBufLine,
 	CHAR *pucValueBuf;
 	/*Xxxx: xxx*/
 	/* 	函数返回一个指针，
-		它指向字符串str2中任意字符在字符串str1 
+		它指向字符串str2中任意字符在字符串str1
 		首次出现的位置，如果不存在返回NULL */
 	pucBuf = strpbrk(pucBufLine, ": ");
 	if (NULL == pucBuf)
@@ -444,7 +444,7 @@ STATIC ULONG web_http_DecLine(IN CHAR *pucBufLine,
 
 
 /* 
-	把数据行解析的数组中 
+	把数据行解析的数组中
 
 	ID=123&ID2=456&ID3=789&submit=-2.194851E-4760.000000%E4%BA-0X1.007FP-1554
 			| |
@@ -461,7 +461,7 @@ STATIC ULONG web_http_DecLine(IN CHAR *pucBufLine,
 /*****************************************************************************
  Prototype    : WEB_http_ProcSubmitMsg
  Description  : 把数据行解析的数组中
- Input        : IN UINT SMsgBufLen      		提交数据长度               
+ Input        : IN UINT SMsgBufLen      		提交数据长度
                 IN const UCHAR *pucSMsgBuf      提交的数据缓冲区地址
                 IN WEB_HTTP_REQSUBMITDATA_S *ppstSMsg  解析出来的数组
  Output       : None
@@ -476,8 +476,8 @@ STATIC ULONG web_http_DecLine(IN CHAR *pucBufLine,
 
 *****************************************************************************/
 STATIC INT WEB_http_ProcSubmitMsg(IN UINT SMsgBufLen,
-							 	    IN const CHAR *pucSMsgBuf, 
-						            OUT WEB_HTTP_REQSUBMITDATA_S *ppstSMsg)
+							 	  IN const CHAR *pucSMsgBuf,
+						          OUT WEB_HTTP_REQSUBMITDATA_S *ppstSMsg)
 {
 	//ULONG ulP = 0;
 	//ULONG ulNP = 0;
@@ -650,6 +650,10 @@ ULONG WEB_http_DecHttpReqMsg(IN CHAR *pucBuf,
 			MSG_PRINTF("content len:%d, ulBufLen - ulCutOffP = %d",
 					pstHttpReqMsgInfo->stHttpReqMsgHead.uiContentLen,
 					ulBufLen - ulCutOffP);
+			if (0 == pstHttpReqMsgInfo->stHttpReqMsgHead.uiContentLen || (0 == ulBufLen - ulCutOffP)) {
+				MSG_PRINTF("no centents in http request.");
+				return ERROR_SUCCESS;
+			}
 			ilNumOfSubMsg = WEB_http_ProcSubmitMsg(ulBufLen - ulCutOffP,
 												   pucBuf,
 												   pstHttpReqMsgInfo->pstHttpReqSubmitData);

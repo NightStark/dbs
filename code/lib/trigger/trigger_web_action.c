@@ -95,6 +95,22 @@ ULONG quemsg_trigeer_WebAction_ControlAsk_DisConnSever(IN VOID *pReqBuf,
 	return ulRet;
 }
 
+ULONG quemsg_trigeer_WebAction_getSysInfo(IN VOID *pReqBuf,
+	 									  IN WEB_HTTP_REQMSGINFO_S *pstWebHttpReqMsgInfo,
+	 									  IN WEB_ACTION_RESP_S *pstWebActionResp)
+{
+	UINT  uiRet = 0;
+    ULONG ulRet = ERROR_SUCCESS;
+
+    uiRet = sprintf(pReqBuf, "system information.");
+
+	pstWebActionResp->uiWebEventRespType = THRD_QUEMSG_TYPE_WEB_EVENT_SYSINFO_RESP;
+	pstWebActionResp->uiRespBufLen 		 = uiRet;
+	pstWebActionResp->pRespBuf           = pReqBuf;
+
+	return ulRet;
+}
+
 
 ULONG quemsg_trigeer_WebAction_SaveSet(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstThrdQueMsg)
 {
@@ -103,17 +119,30 @@ ULONG quemsg_trigeer_WebAction_SaveSet(IN INT iSrcThrdId, IN const THREAD_QUEMSG
 	return ulRet;
 }
 
-
-
-QUEMSG_TRIGGER_FUN g_TriggerWebActionList[THRD_QUEMSG_TYPE_WEB_EVENT_MAX] = 
+WEB_ACT_TRR_OBJ_ST g_TriggerWebActionList[THRD_QUEMSG_TYPE_WEB_EVENT_MAX] =
 {
 	//[THRD_QUEMSG_TYPE_WEB_EVENT_ASK]		  = NULL,//quemsg_trigeer_WebAction_Ask,
 	
 	//[WET_SET_ASK]  = quemsg_trigeer_WebAction_SetAsk,
 	//[WET_SET_SAVE] = quemsg_trigeer_WebAction_SaveSet,
 
-	[WET_CTRL_CONN_SER]    = quemsg_trigeer_WebAction_ControlAsk_ConnSever,
-	[WET_CTRL_DISCONN_SER] = quemsg_trigeer_WebAction_ControlAsk_DisConnSever,
+	[WET_CTRL_CONN_SER]    =
+	{   WET_CTRL_CONN_SER & 0x10000,
+		"WET_CTRL_CONN_SER",
+		quemsg_trigeer_WebAction_ControlAsk_ConnSever,
+	},
+	[WET_CTRL_DISCONN_SER] =
+	{
+		WET_CTRL_DISCONN_SER & 0x10000,
+		"WET_CTRL_DISCONN_SER",
+		quemsg_trigeer_WebAction_ControlAsk_DisConnSever,
+	},
+	[WET_GET_SYS_INFO] =
+	{
+		WET_GET_SYS_INFO & 0x10000,
+		"WET_GET_SYS_INFO",
+		quemsg_trigeer_WebAction_getSysInfo,
+	},
 };
 
 ULONG trigger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstThrdQueMsg)
@@ -137,7 +166,7 @@ ULONG trigger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstTh
 
 	/****/
 	if (enThrdQueMsgWebEvent < WET_SET_ASK ||
-	    enThrdQueMsgWebEvent > WET_CTRL_MAX)
+	    enThrdQueMsgWebEvent > WET_EVENT_TYPE_MAX)
 	{
 		ERR_PRINTF("Invalid Web Action Queue msg Event[%d]!", enThrdQueMsgWebEvent);
 		return ERROR_FAILE;
@@ -145,9 +174,9 @@ ULONG trigger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstTh
 
 	MSG_PRINTF("TRIGGER Handle msg from Thread(%d) of event(%d)", iSrcThrdId, enThrdQueMsgWebEvent);
 
-	if (NULL != g_TriggerWebActionList[enThrdQueMsgWebEvent])
+	if (NULL != g_TriggerWebActionList[enThrdQueMsgWebEvent].pfQueMsgTrr)
 	{
-		ulRet = g_TriggerWebActionList[enThrdQueMsgWebEvent](pstWebActionReq->pReqBuf, pstWebHttpReqMsgInfo, pstWebActionResp);
+		ulRet = g_TriggerWebActionList[enThrdQueMsgWebEvent].pfQueMsgTrr(pstWebActionReq->pReqBuf, pstWebHttpReqMsgInfo, pstWebActionResp);
 		if (ERROR_SUCCESS != ulRet)
 		{
 			ERR_PRINTF("g_TriggerWebActionList Error !");
@@ -179,4 +208,22 @@ ULONG Trigger_Handle_Msg(IN INT iSrcThrdId,
 	return ulReg;
 }
 
+static const CHAR *g_pcTrrEventListFile = "./web/dir/trr_evt_list.js";
+ULONG Trigger_build_event_list_file(VOID)
+{
+	FILE *fp = NULL;
+
+	fp = fopen(g_pcTrrEventListFile, "w");
+	if (NULL == fp) {
+		ERR_PRINTF("open file [%s] failed.", g_pcTrrEventListFile);
+		return ERROR_FAILE;
+	}
+
+	/* var data = [{name:'sysinfo',evt_id:'123',},{name:'connect',evt_id:'456',},]; */
+
+	fclose(fp);
+	fp = NULL;
+
+	return ERROR_SUCCESS;
+}
 
