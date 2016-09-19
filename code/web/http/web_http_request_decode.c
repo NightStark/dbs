@@ -64,6 +64,8 @@ CHAR * Web_http_DecReqFileType(CHAR *pucReqFile)
 {
 	UINT    uiReqFileLen;
 
+	//TODO: action is at special dir
+
 	uiReqFileLen = strlen(pucReqFile);
 	while( '.' != (*(pucReqFile + uiReqFileLen)))
 	{
