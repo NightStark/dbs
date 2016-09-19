@@ -39,6 +39,7 @@
 #include <ns_log.h>
 #include <ns_msg_client_init.h>
 #include <ns_ssl.h>
+#include <ns_web_event.h>
 
 STATIC ULONG webmain_exit_cb(VOID *arg)
 {
@@ -87,6 +88,7 @@ STATIC INT init(PRUNTYPE_E enPRunType)
 #ifndef NS_EVENTFD
     //TODO:和dbg线程间的交互需要eventfd支持,可以使用socket
 #endif
+    HTTPREQ_EvtDir_Init();
 	/* 
 		web_server_init 和 WEB_action_Init
 		初始化出来的线程资源，将在线程退出时释放掉。

@@ -80,6 +80,8 @@ typedef UCHAR				STTYPED;
 /* 没有 offsetof container_of 会挂掉(这个在内核里里面都有定义的) */
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#endif
+#ifndef container_of
 #define container_of(ptr, type, member) ({ \
 const typeof( ((type *)0)->member ) *__mptr = (ptr); \
 (type *)( (char *)__mptr - offsetof(type,member) );})
