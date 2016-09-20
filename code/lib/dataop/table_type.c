@@ -33,7 +33,7 @@
  TABLE_TYPES_S * Table_Type_AllocMem(void)
  {
 	 TABLE_TYPES_S *pstType;
-	 pstType = mem_alloc(sizeof(TABLE_TYPES_S));
+	 pstType = (TABLE_TYPES_S *)mem_alloc(sizeof(TABLE_TYPES_S));
 	 if(NULL == pstType)
 	 {
 		 ERR_PRINTF("malloc failed!");
@@ -63,26 +63,26 @@
 	 
  
 	 /* 根据类型元素个数分配各种空间 */
-	 pstType->pucTypeName	 = mem_alloc(ulNum * sizeof(UCHAR *));
+	 pstType->pucTypeName	 = (UCHAR **)mem_alloc(ulNum * sizeof(UCHAR *));
 	 if (NULL == pstType->pucTypeName) 	 goto err_mem_alloc_pucTypeName;
-	 pstType->pulTypeLen	 = mem_alloc(ulNum * sizeof(ULONG));
+	 pstType->pulTypeLen	 = (ULONG *)mem_alloc(ulNum * sizeof(ULONG));
 	 if (NULL == pstType->pulTypeLen) 	 goto err_mem_alloc_pulTypeLen;
-	 pstType->pucTypeMap	 = mem_alloc(ulNum * sizeof(UCHAR));
+	 pstType->pucTypeMap	 = (UCHAR *)mem_alloc(ulNum * sizeof(UCHAR));
 	 if (NULL == pstType->pucTypeMap) 	 goto err_mem_alloc_pucTypeMap;
-	 pstType->pucTypeOffset  = mem_alloc(ulNum * sizeof(ULONG));
+	 pstType->pucTypeOffset  = (ULONG *)mem_alloc(ulNum * sizeof(ULONG));
  	 if (NULL == pstType->pucTypeOffset) goto err_mem_alloc_pucTypeOffset;
  
 	 /* 各种必要元素赋值 */
 	 for(uiTCounter = 0; uiTCounter < ulNum; uiTCounter++)
 	 {
-		 pstType->pucTypeName[uiTCounter] = mem_alloc(strlen(pstTableEle[uiTCounter].szTypeName) + 1);
+		 pstType->pucTypeName[uiTCounter] = (UCHAR *)mem_alloc(strlen(pstTableEle[uiTCounter].szTypeName) + 1);
 		 if(NULL == pstType->pucTypeName[uiTCounter])
 		 {
 			 goto err_mem_alloc_TypeName;
 		 }
 		 
 		 //*******
-		 strcpy(pstType->pucTypeName[uiTCounter], pstTableEle[uiTCounter].szTypeName);
+		 strcpy((CHAR *)pstType->pucTypeName[uiTCounter], pstTableEle[uiTCounter].szTypeName);
 		 //*******
 		 pstType->pulTypeLen[uiTCounter] = pstTableEle[uiTCounter].ucTypelen;
 		 //*******
@@ -123,7 +123,7 @@ err_Type_AllocMem:
  
 	 for(ulTCounter = 0; ulTCounter < pstType->ucTypeCount; ulTCounter++)
 	 {
-		 if(0 == strcmp(pstType->pucTypeName[ulTCounter],szTypeName))
+		 if(0 == strcmp((CHAR *)pstType->pucTypeName[ulTCounter],szTypeName))
 		 {
 			 return ulTCounter;;
 		 }

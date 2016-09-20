@@ -1,31 +1,6 @@
-/*****************************************************************************
-//
-//  Copyright (c) 2011 Shanghai Shenghua Communication Co., Ltd.
-//  All Rights Reserved
-//  No portions of this material may be reproduced in any form without the
-//  written permission of:
-//	Shanghai Shenghua Communication Co., Ltd.
-//	Room 1222, Building 3, No.100, Jinyu Road,
-//	Pudong New District, Shanghai, China
-//  All information contained in this document is Shanghai Shenghua
-//  Communication Co., Ltd. private, proprietary, and trade secret.
-//
-******************************************************************************
-//
-//  Filename:       tconv.h
-//  Author:         Terry Yang <ybable@gmail.com>
-//  Creation Date:  19/08/2011
-//  Change history:
-//
-//  Description:
-//	TODO
-//
-*****************************************************************************/
-
 #ifndef _TCONV_H_
 #define _TCONV_H_
 
-#include "typedef.h"
 #include <netinet/in.h>
 
 char *

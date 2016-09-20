@@ -30,7 +30,8 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#include "ns_type_o.h"
+#include <ns_base.h>
+#include <ns_type_o.h>
 
 #define TC_STR_ENABLE	"enable"
 #define TC_STR_DISABLE	"disable"
@@ -45,6 +46,20 @@
 static const char *const week_days[] = {
     "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun",
 };
+
+STATIC INLINE VOID *_init_buf(VOID **p, INT iLen)
+{
+    if (*p == NULL) {
+        *p = malloc(iLen);
+    }
+
+    return *p;
+}
+
+#define init_buf(b, l) \
+    if (NULL == _init_buf((VOID **)&b, l)) { \
+        return NULL; \
+    }
 
 char *
 tc_ip2str (u32 ipv4, char *buf)
@@ -114,7 +129,7 @@ tc_ip6addr2str (struct in6_addr *in6, char *buf)
 {
 	int nb = 0;
 	if (buf == NULL) {
-		buf = malloc(64);
+		buf = (char *)malloc(64);
 		nb = 1;
 		if (buf == NULL)
 			return NULL;
@@ -133,7 +148,7 @@ tc_str2ip6addr (const char *str, struct in6_addr *in6, u8 *prefix)
 	char buf[64];
 	char *slash;
 
-	slash = strchr(str, '/');
+	slash = (char *)strchr(str, '/');
 	memcpy(buf, str, slash - str);
 	buf[slash-str] = 0;
 	if (inet_pton(AF_INET6, buf, in6) != 1)
@@ -470,7 +485,7 @@ char *
 tc_bin2hexstr(const u8 *in, int len)
 {
     int i = 0;
-    char  * outkey = malloc(2*len+1);
+    char  * outkey = (char *)malloc(2*len+1);
     if(outkey == NULL){
         return NULL;
     }
@@ -489,7 +504,7 @@ tc_hexstr2bin(const char *in, int len, u8 ** out, int *outlen)
         return -1;
     }
 
-    *out = malloc(len_t);
+    *out = (u8 *)malloc(len_t);
     if(*out == NULL){
         return -1;
     }

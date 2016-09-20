@@ -1,3 +1,8 @@
+#ifdef __cplusplus
+extern "C" 
+{
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -61,7 +66,7 @@ STATIC ULONG rand_table_ReadFile(void)
 		ERR_PRINTF("read file failed!");
 		return ERROR_FAILE;
 	}
-	g_puiRandTable = mem_alloc(uiTableLen * sizeof(UINT));
+	g_puiRandTable = (UINT *)mem_alloc(uiTableLen * sizeof(UINT));
 	
 	/* 读取表的数据 */
 	uiReadRet = read(uiRTFD, (CHAR *)g_puiRandTable, uiTableLen * sizeof(UINT));		
@@ -98,7 +103,7 @@ VOID RAND_table_create(IN UINT uiTableLen)
 	UINT  uiI = 0;
 	UINT  uiTemp = 0;
 
-	puiRandTable = mem_alloc(uiTableLen * sizeof(UINT) + 1);
+	puiRandTable = (UINT *)mem_alloc(uiTableLen * sizeof(UINT) + 1);
 
 	srand(time(0));
 	while (1)
@@ -130,3 +135,6 @@ VOID RAND_table_create(IN UINT uiTableLen)
 	
 	return ;
 }
+#ifdef __cplusplus
+}
+#endif

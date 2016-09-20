@@ -15,9 +15,9 @@
 #define SON_SON_LEFT	(0x00000001UL)
 #define SON_SON_RIGHT	(0x00000002UL)
 
-#define BLCFCT_EP		(0UL)
-#define BLCFCT_LT		(1UL)
-#define BLCFCT_RT      	(-1UL)
+#define BLCFCT_EP		(0L)
+#define BLCFCT_LT		(1L)
+#define BLCFCT_RT      	(-1L)
 
 /* 更该节点下树的高度，和平衡因子(不保证平衡) */
 STATIC inline 
@@ -316,7 +316,7 @@ ULONG AVL_Sys_Init(VOID)
 		return ERROR_FAILE;
 	}
 	
-	pstAVLSysHead = malloc(sizeof(DCL_HEAD_S));
+	pstAVLSysHead = (DCL_HEAD_S *)malloc(sizeof(DCL_HEAD_S));
 	if (NULL == pstAVLSysHead)
 	{
 		return ERROR_NOT_ENOUGH_MEM;
@@ -515,7 +515,7 @@ AVL_INFO_S * AVL_Init(AVL_INSERT_CMP_CALLBACK pfAvlInsertCmpCallBack,
 {
 	AVL_INFO_S *pstAvlInfo = NULL;
 
-	pstAvlInfo = malloc(sizeof(AVL_INFO_S));
+	pstAvlInfo = (AVL_INFO_S *)malloc(sizeof(AVL_INFO_S));
 	if(NULL == pstAvlInfo)
 	{
 		return NULL;
@@ -674,7 +674,7 @@ INT AVL_TEST(VOID)
 					   FREE_CallBack,
 					   COPY_CallBack);
 
-	pstAvlTD = malloc(sizeof(AVL_TEST_DATA_S));
+	pstAvlTD = (AVL_TEST_DATA_S *)malloc(sizeof(AVL_TEST_DATA_S));
 	memset(pstAvlTD, 0, sizeof(AVL_TEST_DATA_S));
 	pstAvlTD->ulData = 1990;
 	AVL_InsertNode(&(pstAvlTD->stAvlNode), pstAVL);
@@ -689,7 +689,7 @@ INT AVL_TEST(VOID)
 			continue;
 		}
 		
-		pstAvlTD = malloc(sizeof(AVL_TEST_DATA_S));
+		pstAvlTD = (AVL_TEST_DATA_S *)malloc(sizeof(AVL_TEST_DATA_S));
 		memset(pstAvlTD, 0, sizeof(AVL_TEST_DATA_S));
 		pstAvlTD->ulData = (ULONG)iRandZ;
 		AVL_InsertNode(&(pstAvlTD->stAvlNode), pstAVL);
@@ -953,7 +953,7 @@ ULONG* create_data_table(ULONG ulLen)
 {
 	INT i = 0;
 	ULONG *pulData = NULL;
-	pulData = malloc(sizeof(ULONG) * ulLen);
+	pulData = (ULONG *)malloc(sizeof(ULONG) * ulLen);
 	for (i = 0; i < ulLen; i++)
 	{
 		pulData[i] = i;
@@ -1074,7 +1074,7 @@ INT avl_rotate_test(INT cnt)
 	{
 		data = get_rand_data_ftable(pulData, cnt);
 		
-		pstData = malloc(sizeof(MY_DATA_S));
+		pstData = (MY_DATA_S *)malloc(sizeof(MY_DATA_S));
 		memset(pstData, 0, sizeof(AVL_NODE_S));
 		pstData->ulData = data;
 		AVL_Insert(&(pstData->stNode), &g_pstAVLHead, insert_DataCmp);
@@ -1121,7 +1121,7 @@ INT avl_insert_test(INT cnt)
 	{
 		data = get_rand_data_ftable(pulData, cnt);
 		
-		pstData = malloc(sizeof(MY_DATA_S));
+		pstData = (MY_DATA_S* )malloc(sizeof(MY_DATA_S));
 		memset(pstData, 0, sizeof(AVL_NODE_S));
 		pstData->ulData = data;
 		AVL_Insert(&(pstData->stNode), &g_pstAVLHead, insert_DataCmp);
@@ -1171,7 +1171,7 @@ INT avl_delete_test(INT cnt)
 	{
 		data = get_rand_data_ftable(pulData, cnt);
 		
-		pstData = malloc(sizeof(MY_DATA_S));
+		pstData = (MY_DATA_S *)malloc(sizeof(MY_DATA_S));
 		memset(pstData, 0, sizeof(MY_DATA_S));
 		pstData->ulData = data;
 		AVL_Insert(&(pstData->stNode), &g_pstAVLHead, insert_DataCmp);
@@ -1202,7 +1202,7 @@ INT avl_delete_test(INT cnt)
 		
 		if(avl_balance_test(g_pstAVLHead)){ERR_PRINTF("LOST Balance Delete\n");};
 		
-		pstData = malloc(sizeof(MY_DATA_S));
+		pstData = (MY_DATA_S *)malloc(sizeof(MY_DATA_S));
 		memset(pstData, 0, sizeof(MY_DATA_S));
 		pstData->ulData = i;
 		AVL_Insert(&(pstData->stNode), &g_pstAVLHead, insert_DataCmp);
@@ -1259,7 +1259,7 @@ INT avl_delete_lots_test(INT cnt)
 	{
 		data = get_rand_data_ftable(pulData, cnt);
 		
-		pstData = malloc(sizeof(MY_DATA_S));
+		pstData = (MY_DATA_S *)malloc(sizeof(MY_DATA_S));
 		memset(pstData, 0, sizeof(MY_DATA_S));
 		pstData->ulData = data;
 		AVL_Insert(&(pstData->stNode), &g_pstAVLHead, insert_DataCmp);

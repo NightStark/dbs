@@ -55,7 +55,7 @@ AB_INFO_S *AB_Create(ULONG ulNABlen, VOID *pNAB)
 {
 	AB_INFO_S *pstAB;
 
-	pstAB = mem_alloc(sizeof(AB_INFO_S));
+	pstAB = (AB_INFO_S *)mem_alloc(sizeof(AB_INFO_S));
 	if (NULL == pstAB)
 	{
 		return NULL;

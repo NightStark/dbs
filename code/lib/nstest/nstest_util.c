@@ -146,7 +146,7 @@ VOID ns_test_getTList(VOID)
 		return;
 	}
 
-	cTListBuf = mem_alloc(stTListStat.st_size);
+	cTListBuf = (CHAR *)mem_alloc(stTListStat.st_size);
 	if (NULL == cTListBuf)
 	{
 		MSG_PRINTF("Mem_alloc Failed!");

@@ -12,6 +12,4 @@ typedef signed long long    s64;
 
 #include <stdlib.h>
 
-#define init_buf(b, s) {if (b == NULL)b = malloc(s);if (b == NULL)return NULL;}
-
 #endif /* _TYPEDEF_H_ */                                                                

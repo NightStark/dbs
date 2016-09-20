@@ -1,3 +1,8 @@
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -37,3 +42,7 @@ ULONG FSM_Init(VOID)
 {
 	return ERROR_SUCCESS;
 }
+
+#ifdef __cplusplus
+}
+#endif

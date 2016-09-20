@@ -154,7 +154,7 @@ ULONG trigger_proc_Event(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstTh
 	WEB_HTTP_REQMSGINFO_S    *pstWebHttpReqMsgInfo;
 	WEB_EVENT_TYPE_E          enThrdQueMsgWebEvent;
 
-	pstWebActionResp = mem_alloc(sizeof(WEB_ACTION_RESP_S));
+	pstWebActionResp = (WEB_ACTION_RESP_S *)mem_alloc(sizeof(WEB_ACTION_RESP_S));
 	if(NULL == pstWebActionResp)
 	{
 		return ERROR_FAILE;

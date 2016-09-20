@@ -54,10 +54,10 @@ VOID msg_clientserver_QueMsgRecv(IN INT iThread,IN const THREAD_QUEMSG_DATA_S *p
 	//MSG_PRINTF("wakeup......");
 	
     THREAD_QUEMSG_DATA_S stThrdQueMsg;
-    char *pstData = NULL;
+    CHAR *pstData = NULL;
     mem_set0(&stThrdQueMsg, sizeof(THREAD_QUEMSG_DATA_S));
     
-	pstData = mem_alloc(100);
+	pstData = (CHAR *)mem_alloc(100);
 	DBGASSERT(NULL != pstData);
     sprintf(pstData, "This is Resp Test Msg--of [%s]", (CHAR *)pstThrdQueMsg->pQueMsgData);
     MSG_PRINTF("Send Resp Test Msg --of [%s]", (CHAR *)pstThrdQueMsg->pQueMsgData);
@@ -285,11 +285,11 @@ ULONG msg_client_ConnSuccess(THREAD_EPOLL_EVENTS_S *pstThrdEpEvt)
     INT iSrcThrdId;
     THREAD_QUEMSG_DATA_S stThrdQueMsg;
     THREAD_QUEMSG_DATA_S stRecvThrdQueMsg;
-    char *pstData = NULL;
+    CHAR *pstData = NULL;
     mem_set0(&stThrdQueMsg, sizeof(THREAD_QUEMSG_DATA_S));
     for(;i < 4;i ++)
     {
-		pstData = mem_alloc(100);
+		pstData = (CHAR *)mem_alloc(100);
 		DBGASSERT(NULL != pstData);
         sprintf(pstData, "This is Test Msg--%d", i);
         MSG_PRINTF("Send Test Msg -- %d ", i);

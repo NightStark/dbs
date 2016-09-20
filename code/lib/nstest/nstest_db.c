@@ -49,7 +49,7 @@ ULONG NSTEST_CreateNSTestEle(IN const UCHAR *szName,
 	DBGASSERT(NULL != szName);
 	DBGASSERT(NULL != pf);
 
-	pstNsTestNode = mem_alloc(sizeof(NSTEST_ELE));
+	pstNsTestNode = (NSTEST_ELE *)mem_alloc(sizeof(NSTEST_ELE));
 	if (NULL == pstNsTestNode)
 	{
 		return ERROR_SUCCESS;

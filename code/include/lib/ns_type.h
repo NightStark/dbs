@@ -96,7 +96,7 @@ typedef struct st_table_types_tag
 	UCHAR		ucTypeCount;    /* 元素个数 */
 	UCHAR	   *pucTypeMap;		/* 元素类型 */
 	ULONG	   *pucTypeOffset;	/* 元素偏移，便于快速查找 */
-	CHAR	  **pucTypeName;	/* 元素名称 */
+	UCHAR	  **pucTypeName;	/* 元素名称 */
 	ULONG	   *pulTypeLen;		/* 元素长度(Bytes),便于在复制时去掉类型 */
 	
 }TABLE_TYPES_S;

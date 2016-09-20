@@ -72,7 +72,7 @@ STATIC BIT_MAP_INFO_S * alloc_bitmapinfo_node(UINT uiMapSize)
 	BIT_MAP_INFO_S *pstBitMapinfoNode = NULL;
 
 	/* create node */
-	pstBitMapinfoNode = mem_alloc(sizeof(BIT_MAP_INFO_S));
+	pstBitMapinfoNode = (BIT_MAP_INFO_S *)mem_alloc(sizeof(BIT_MAP_INFO_S));
 	if (NULL == pstBitMapinfoNode)
 	{
 		return NULL;
@@ -80,7 +80,7 @@ STATIC BIT_MAP_INFO_S * alloc_bitmapinfo_node(UINT uiMapSize)
 	
 	pstBitMapinfoNode->lBitMapID = time(NULL);
 	pstBitMapinfoNode->uiBitMapSize = uiMapSize;
-	pstBitMapinfoNode->pcBitMapList = mem_alloc((uiMapSize / 8) + 1);
+	pstBitMapinfoNode->pcBitMapList = (CHAR *)mem_alloc((uiMapSize / 8) + 1);
 	if (NULL == pstBitMapinfoNode->pcBitMapList)
 	{
 		free(pstBitMapinfoNode);

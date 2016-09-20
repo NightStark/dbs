@@ -46,14 +46,14 @@ STATIC OPDATA_DATA_S * opdata_data_AllocMem(ULONG ulDataSize)
 	OPDATA_DATA_S *pstDataTmp = NULL;
 
 	/* 数据节点 */
-	pstDataTmp = mem_alloc(sizeof(OPDATA_DATA_S));
+	pstDataTmp = (OPDATA_DATA_S *)mem_alloc(sizeof(OPDATA_DATA_S));
 	if(NULL == pstDataTmp)
 	{
 		ERR_PRINTF("alloc mem for data struct failed!");
 	}
 	
 	/* 数据内存 */
-	pstDataTmp->pData = mem_alloc(ulDataSize);
+	pstDataTmp->pData = (ULONG *)mem_alloc(ulDataSize);
 	if(NULL == pstDataTmp->pData)
 	{
 		ERR_PRINTF("alloc mem for data failed!");
@@ -133,7 +133,7 @@ STATIC OPDATA_DATA_S *opdata_data_FindNode(IN TABLE_S *pstTable,
 	}
 
 	uiTOffset = pstType->pucTypeOffset[ulTIndex];
-	atTType	  = pstType->pucTypeMap[ulTIndex];
+	atTType	  = (ANY_TYPE_EN)pstType->pucTypeMap[ulTIndex];
 	ulTypeLen = pstType->pulTypeLen[ulTIndex];
 
 	DCL_FOREACH_ENTRY(pstListHead,pstData,stNode)
@@ -145,7 +145,7 @@ STATIC OPDATA_DATA_S *opdata_data_FindNode(IN TABLE_S *pstTable,
 		//数据比较
 		if (AT_SZ == atTType)
 		{
-			ulRet = str_safe_cmp(pdata, ulFindData, ulTypeLen);			
+			ulRet = str_safe_cmp((const CHAR *)pdata, (CHAR *)ulFindData, ulTypeLen);			
 		}
 		else
 		{

@@ -243,7 +243,7 @@ INT TIMER_CreateForThread(IN INT iThreadId, /* 待整合 */
 		return -1;
 	}
 					   
-	pstTimerData = mem_alloc(sizeof(TIMER_DATA_S));
+	pstTimerData = (TIMER_DATA_S *)mem_alloc(sizeof(TIMER_DATA_S));
 	if (NULL == pstTimerData)
 	{
 		ERR_PRINTF("mem_alloc Failed!");

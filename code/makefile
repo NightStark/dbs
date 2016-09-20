@@ -74,7 +74,7 @@ else
 endif 
 #CROSS=mips-linux-
  
-CC=$(CROSS)gcc
+CC=$(CROSS)g++
 LD=$(CROSS)ld
 
 export CC
@@ -85,7 +85,7 @@ export LD
 CFLAGS = -Wall -lpthread -I include/lib/ -lm -lrt -ggdb -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
 CFLAGS += -lmysqlclient -L/usr/lib64/mysql/
 #OBJ_FLAGS =  -g -lpthread -I include/lib/ -fpic -lm -Wall 
-OBJ_FLAGS =  -ggdb -lpthread -I include/lib/ -fpic -lm -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl
+OBJ_FLAGS =  -ggdb -lpthread -I include/lib/ -fpic -lm -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
 
 DEBUG = y
 

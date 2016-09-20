@@ -193,9 +193,11 @@
 #define ERROR_PROCESS_NOMSG       (ERROR_BASE - 0x03FF)
 
 
+#ifndef __cplusplus
 #ifdef NULL
 #undef NULL
 #define NULL (void *)0
+#endif
 #endif
 
 #ifndef STATIC

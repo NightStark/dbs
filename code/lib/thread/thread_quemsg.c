@@ -78,7 +78,7 @@ STATIC THREAD_QUEMSG_NODE_S * thread_quemsg_NodeGetBySeqNum(IN INT iQueMsgSeqNum
 STATIC THREAD_QUEMSG_NODE_S * thread_quemsg_NodeAdd(IN DCL_HEAD_S * pstHead)
 {
     THREAD_QUEMSG_NODE_S *pstThrdQueMsgNode = NULL;
-	pstThrdQueMsgNode = mem_alloc(sizeof(THREAD_QUEMSG_NODE_S));
+	pstThrdQueMsgNode = (THREAD_QUEMSG_NODE_S *)mem_alloc(sizeof(THREAD_QUEMSG_NODE_S));
 	if (NULL == pstThrdQueMsgNode)
 	{
 		return NULL;

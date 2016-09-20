@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include <ns_base.h>
+#include <ns_tconv.h>
 #include <ns_config.h>
 
 typedef enum tag_cfg_index
@@ -119,7 +120,7 @@ ULONG cfg_line_parse(INOUT CHAR *pcLine, IN INT iBufLen, IN INT iLineNo)
 
 	MSG_PRINTF("%s = %s", pcCfgName, pcCfgValue);
 
-	cfg_set(pcCfgName, pcCfgValue, 0);
+	cfg_set(pcCfgName, pcCfgValue, CFG_INDEX_LOCAL_IP);
 
 	return ERROR_SUCCESS;
 }

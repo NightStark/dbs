@@ -362,7 +362,7 @@ THREAD_EPOLL_S *THREAD_epoll_Create(VOID)
 	INT iEpFd  = -1;
 	THREAD_EPOLL_S *pstThrdEp;
 
-	pstThrdEp = mem_alloc(sizeof(THREAD_EPOLL_S));
+	pstThrdEp = (THREAD_EPOLL_S *)mem_alloc(sizeof(THREAD_EPOLL_S));
 	if (NULL == pstThrdEp)
 	{
         ERR_PRINTF("mem_alloc Failed!");

@@ -19,7 +19,7 @@
 VOID *client_AskSrvReapCode_Alloc(VOID)
 {	
 	VOID *pData = NULL;
-	pData = mem_alloc(sizeof(UINT));
+	pData = (VOID *)mem_alloc(sizeof(UINT));
 	return pData;
 }
 

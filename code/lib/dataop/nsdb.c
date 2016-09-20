@@ -268,7 +268,7 @@ ULONG NSDB_FindData(IN  CHAR *TableName,
 	}
 	pstType  = pstTable->pstTableTypes;
 
-	szData = mem_alloc(pstType->ulSTLong);
+	szData = (CHAR *)mem_alloc(pstType->ulSTLong);
 	if (NULL == szData)
 	{
 		return ERROR_NOT_ENOUGH_MEM;
@@ -358,7 +358,7 @@ ULONG NSDB_AddData(CHAR *TableName, VOID *pAddEle, UINT uiEleNum)
 		}
 		//pstAddDataEle += sizeof(ADD_DATA_ELE_S);
 	}
-	DBG_PRINT_LOG("pDBDataBuf.bat",pDBDataBuf,pstType->ulSTLong);
+	DBG_PRINT_LOG("pDBDataBuf.bat", (CHAR *)pDBDataBuf,pstType->ulSTLong);
 
 	ulRet = Opdata_data_Create(pstTable, (ULONG *)(pDBDataBuf), pstType->ulSTLong);
 	
@@ -417,7 +417,7 @@ ULONG NSDB_UpdateData(IN CHAR *TableName,
 		}
 		//pstAddDataEle += sizeof(ADD_DATA_ELE_S);
 	}
-	DBG_PRINT_LOG("pDBDataBuf.bat",pDBDataBuf,pstType->ulSTLong);
+	DBG_PRINT_LOG("pDBDataBuf.bat", (CHAR *)pDBDataBuf,pstType->ulSTLong);
 
 	ulRet = Opdata_data_UpdateData(pstTable, szTypeName, ulFindData, pDBDataBuf);
 	
