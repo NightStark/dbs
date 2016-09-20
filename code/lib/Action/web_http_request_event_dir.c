@@ -169,6 +169,7 @@ HTTPREQ_EVTDIR_INFO_ST *HTTPREQ_EvtDir_findByHash(IN CHAR *pcDir, IN INT iLen)
 /* ================================================================================ */
 ULONG HTTPREQ_EvtDir_Init(VOID)
 {
+
     DCL_Init(&g_stHttpReq_EvtDir_ListHead);
     
     return ERROR_SUCCESS;

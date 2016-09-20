@@ -44,5 +44,5 @@ code.taobao.com
 	密码：051031448
 
 
-
-
+g++ call gcc lib:
+    g++ array.c -I include/lib/ -L. -lnsdb

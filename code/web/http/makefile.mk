@@ -5,5 +5,5 @@ SRC_WEBS += $(DIR_WEB_HTTP)/web_http_readfile.c
 SRC_WEBS += $(DIR_WEB_HTTP)/web_http_createResp.c
 SRC_WEBS += $(DIR_WEB_HTTP)/web_http_handlehttpreq.c
 SRC_WEBS += $(DIR_WEB_HTTP)/web_http_handleevent.c
-SRC_WEBS += $(DIR_WEB_HTTP)/web_http_request_event_dir.c
+
 
