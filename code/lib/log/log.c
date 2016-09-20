@@ -1,3 +1,10 @@
+#ifdef __cplusplus
+#if __cplusplus
+extern "C"
+{
+#endif
+#endif
+
 #include <paths.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,9 +38,9 @@ static int syslog_conn = 0;
 extern struct ns_log_ctl g_ns_log_ctl;
 
 
-static const struct sockaddr syslog_addr = {
-	.sa_family = AF_UNIX, /* sa_family_t (usually a short) */
-	.sa_data = _PATH_LOG  /* char [14] */
+static struct sockaddr syslog_addr = {0  //FOR g++
+	//.sa_family = AF_UNIX, /* sa_family_t (usually a short) */
+	//.sa_data = _PATH_LOG  /* char [14] */
 };
 
 
@@ -258,7 +265,7 @@ ns_log_mx(int id, int level, const char *fmt, ...)
     va_end(argptr);
 
     if (p >= end || p < head_end) {/* Returned -1 in case of error... */
-        static const char truncate_msg[12] = "[truncated] "; /* no NUL! */
+        static const char truncate_msg[32] = "[truncated] "; /* no NUL! */
         memmove(head_end + sizeof(truncate_msg), head_end,
                 end - head_end - sizeof(truncate_msg));
         memcpy(head_end, truncate_msg, sizeof(truncate_msg));
@@ -311,6 +318,10 @@ ns_log_init(const char *name)
 	if (name == NULL) {
 		name = NS_LOG_SYSLOG_NAME;
 	}
+
+	 syslog_addr.sa_family = AF_UNIX;
+	 snprintf(syslog_addr.sa_data, sizeof(syslog_addr.sa_data), "%s",  _PATH_LOG);
+
 	if (strlen(name) > 64) {
 		fprintf(stderr, "Log name is too long! %s\n", name);
 		return -1;
@@ -379,7 +390,7 @@ ns_log_pack_flash_log()
 		ns_log(LOG_ERR, "%s: rm %s fail! %s", __func__, LOG_PACK_FILE_PATH, strerror(errno));
 	}
 	
-	/* 这里不能改为后台运行，后台运行会导致web开始上传时该文件没有准备好 */
+	/* 锟斤拷锟斤不锟杰革拷为锟斤拷台锟斤拷锟叫ｏ拷锟斤拷台锟斤拷锟叫会导锟斤拷web锟斤拷始锟较达拷时锟斤拷锟侥硷拷没锟斤拷准锟斤拷锟斤拷 */
 	sprintf(buf, "{ if [ ! -d %s ]; then mkdir %s;fi ; cp %s* %s; cp /tmp/syslog %s ; cd %s; tar zcvf %s * ;rm %s -rf; }", 
 			LOG_FILE_UPLOAD_DIR, LOG_FILE_UPLOAD_DIR, LOG_FILE_DIR, LOG_FILE_UPLOAD_DIR,
 			LOG_FILE_UPLOAD_DIR, LOG_FILE_UPLOAD_DIR, LOG_PACK_FILE_PATH,LOG_FILE_UPLOAD_DIR);
@@ -393,3 +404,8 @@ ns_log_backtrace ()
 {
 }
 
+#ifdef __cplusplus
+#if __cplusplus
+}
+#endif
+#endif

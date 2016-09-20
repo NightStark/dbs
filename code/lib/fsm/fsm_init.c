@@ -22,9 +22,17 @@ extern "C"
 typedef ULONG (* PFFSMMSGPROC)(MSG_MSG_RECV_INFO_S *);
 
 STATIC PFFSMMSGPROC g_apfFSMMsgProcList[MSG_TYPE_NSDB_TOP] = 
-{
-	[MSG_TYPE_NSDB_ASK_SERVICE_REQ] 	= FSM_msg_proc_AskServiceReq,
-	[MSG_TYPE_NSDB_SELECT_CREATE_TABLE_REQ] = FSM_msg_proc_ClientCreateTable,
+{		//FOR C++(g++) not support "[MSG_TYPE_NSDB_ASK_SERVICE_REQ] = FSM_msg_proc_AskServiceReq" fuck
+		/* MSG_TYPE_NSDB_NONE = 0, */ NULL,
+
+		/* [MSG_TYPE_NSDB_ASK_SERVICE_REQ] =        */ FSM_msg_proc_AskServiceReq,
+		/* MSG_TYPE_NSDB_ASK_SERVICE_RESP, */ NULL,
+
+		/* MSG_TYPE_NSDB_SELECT_REQ, */ NULL,
+		/* MSG_TYPE_NSDB_SELECT_RESP, */ NULL,
+
+		/* [MSG_TYPE_NSDB_SELECT_CREATE_TABLE_REQ] = */ FSM_msg_proc_ClientCreateTable,
+		/* MSG_TYPE_NSDB_SELECT_CREATE_TABLE_RESP, */ NULL,
 };
 
 ULONG FMS_msg_Proc(MSG_MSG_RECV_INFO_S *pstMsgRecvInfo)

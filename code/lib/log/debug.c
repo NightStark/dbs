@@ -280,7 +280,7 @@ STATIC inline DBG_PRINT_BUFFER_S * debug_CreatePrintData(IN DBG_TYPE_E  enDbgTyp
 {
 	DBG_PRINT_BUFFER_S *pstDbgPrintBuf = NULL;
 	
-	pstDbgPrintBuf = malloc(sizeof(DBG_PRINT_BUFFER_S));
+	pstDbgPrintBuf = (DBG_PRINT_BUFFER_S *)malloc(sizeof(DBG_PRINT_BUFFER_S));
 	if (NULL == pstDbgPrintBuf)
 	{
 		DBGERR_PRINTF("malloc Failed");
@@ -289,7 +289,7 @@ STATIC inline DBG_PRINT_BUFFER_S * debug_CreatePrintData(IN DBG_TYPE_E  enDbgTyp
 	}
 	memset(pstDbgPrintBuf, 0 ,sizeof(DBG_PRINT_BUFFER_S));
 	
-	pstDbgPrintBuf->pcString = malloc(iStrLen); /* 这里+1，就是因为vsnprintf的返回值没有包括'\0' */
+	pstDbgPrintBuf->pcString = (CHAR *)malloc(iStrLen); /* 这里+1，就是因为vsnprintf的返回值没有包括'\0' */
 	if (NULL == pstDbgPrintBuf->pcString)
 	{
 		DBGERR_PRINTF("malloc Failed");

@@ -74,7 +74,7 @@ else
 endif 
 #CROSS=mips-linux-
  
-CC=$(CROSS)g++
+CC=$(CROSS)gcc
 LD=$(CROSS)ld
 
 export CC

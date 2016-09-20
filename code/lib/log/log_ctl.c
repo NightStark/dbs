@@ -8,7 +8,7 @@ int ns_log_mod_def (void *addr, int id, int level)
 {
 #if 1
 	int mask = 0;
-	struct ns_log_ctl_lv *lv = addr;
+	struct ns_log_ctl_lv *lv = (struct ns_log_ctl_lv *)addr;
 
 	if (lv->stderr_en && lv->stderr_lv >= level) {
 		mask |= NS_LOG_TO_STDOUT;
