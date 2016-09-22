@@ -1,0 +1,13 @@
+AUTOMAKE_OPTIONS=foreign
+#本目录下的代码编译成libaction.a库。不需要发布。如果需要发布，则写成bin_LIBRARIES。
+#注意，库的名称格式必需为 libxxx.a。因为编译静态库，configure.in需要定义AC_PROG_RANLIB宏。
+noinst_LIBRARIES=libaction.a   
+#编译libaction.a需要的源文件。注意将库名称中的'.'号改成'_'号。 
+libaction_a_SOURCES =action_dec.c
+libaction_a_SOURCES+=web_action_handle.c
+libaction_a_SOURCES+=web_action_init.c
+libaction_a_SOURCES+=web_http_request_event_dir.c
+libaction_a_SOURCES+=setting/create_setting_forhttp.c
+libaction_a_SOURCES+=setting/web_setting.c
+libaction_a_CFLAGS=-I $(top_builddir)/include/lib
+#libaction_a_CFLAGS=$(INCLUDES)

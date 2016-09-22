@@ -1,0 +1,10 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libclient.a   
+libclient_a_SOURCES = client_askserver.c
+libclient_a_SOURCES+= client_fsm.c
+libclient_a_SOURCES+= client_fsm_proc.c
+libclient_a_SOURCES+= client_nsdb.c
+libclient_a_SOURCES+= client_recv.c
+libclient_a_SOURCES+= client_send.c
+libclient_a_SOURCES+= client_work.c
+libclient_a_CFLAGS=-I $(top_builddir)/include/lib

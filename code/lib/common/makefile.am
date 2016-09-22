@@ -1,0 +1,4 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libcommon.a   
+libcommon_a_SOURCES =tconv.c
+libcommon_a_CFLAGS=-I $(top_builddir)/include/lib

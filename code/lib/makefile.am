@@ -1,0 +1,11 @@
+AUTOMAKE_OPTIONS=foreign
+SUBDIRS=Action client common
+projectlibdir=./
+projectlib_PROGRAMS=libnsdb.so  
+libnsdb_so_SOURCES=   #not libxx.a need xx.c!
+#libnsdb_so_SOURCES=Action/libaction.a client/libclient.a common/libcommon.a
+
+libnsdb_so_LDADD  =-laction -LAction
+libnsdb_so_LDADD +=-lclient -Lclient
+libnsdb_so_LDADD +=-lcommon -Lcommon
+libnsdb_so_LDFLAGS=-shared -fpic #GCC编译动态库的选项
