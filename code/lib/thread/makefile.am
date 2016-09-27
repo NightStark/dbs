@@ -1,0 +1,10 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libthread.a   
+libthread_a_SOURCES  = thread_debug.c
+libthread_a_SOURCES += thread_epoll.c
+libthread_a_SOURCES += thread_init.c
+libthread_a_SOURCES += thread_main.c
+libthread_a_SOURCES += thread_quemsg.c
+libthread_a_SOURCES += thread_server.c
+libthread_a_SOURCES += thread_wait.c
+libthread_a_CFLAGS=-I $(top_builddir)/include/lib

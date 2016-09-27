@@ -1,0 +1,8 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=liblog.a   
+liblog_a_SOURCES  = debug.c
+liblog_a_SOURCES += debug_process.c
+liblog_a_SOURCES += debug_thread.c
+liblog_a_SOURCES += log.c
+liblog_a_SOURCES += log_ctl.c
+liblog_a_CFLAGS=-I $(top_builddir)/include/lib

@@ -1,0 +1,5 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libossl.a   
+libossl_a_SOURCES  = client_init.c
+libossl_a_SOURCES += server_init.c
+libossl_a_CFLAGS=-I $(top_builddir)/include/lib

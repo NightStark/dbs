@@ -1,0 +1,6 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libserver.a   
+libserver_a_SOURCES  = server_init.c
+libserver_a_SOURCES += server_ProcClientCreateTable.c
+libserver_a_SOURCES += server_ProcServerAskReq.c
+libserver_a_CFLAGS=-I $(top_builddir)/include/lib

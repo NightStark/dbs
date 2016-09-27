@@ -1,0 +1,6 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libtrigger.a   
+libtrigger_a_SOURCES  = trigger_client_link.c
+libtrigger_a_SOURCES += trigger_thread_quemsg_recv.c
+libtrigger_a_SOURCES += trigger_web_action.c
+libtrigger_a_CFLAGS=-I $(top_builddir)/include/lib

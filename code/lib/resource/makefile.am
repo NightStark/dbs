@@ -1,0 +1,11 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libresource.a   
+libresource_a_SOURCES  = appendbuf.c
+libresource_a_SOURCES += bitmap.c
+libresource_a_SOURCES += epoll.c
+libresource_a_SOURCES += event.c
+libresource_a_SOURCES += id.c
+libresource_a_SOURCES += lilist.c
+libresource_a_SOURCES += progressbar.c
+libresource_a_SOURCES += timer.c
+libresource_a_CFLAGS=-I $(top_builddir)/include/lib

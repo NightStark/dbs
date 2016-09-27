@@ -1,0 +1,6 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libsm.a   
+libsm_a_SOURCES  =  cs_sm/client_sm.c
+libsm_a_SOURCES +=  cs_sm/cs_msg_desc_reg.c
+libsm_a_SOURCES +=  cs_sm/server_sm.c
+libsm_a_CFLAGS=-I $(top_builddir)/include/lib

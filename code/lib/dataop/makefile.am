@@ -1,0 +1,8 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libdataop.a   
+libdataop_a_SOURCES  = avl.c
+libdataop_a_SOURCES += nsdb.c
+libdataop_a_SOURCES += opdata.c
+libdataop_a_SOURCES += table.c
+libdataop_a_SOURCES += table_type.c
+libdataop_a_CFLAGS=-I $(top_builddir)/include/lib

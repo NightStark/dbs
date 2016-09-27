@@ -1,0 +1,4 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libconfig.a   
+libconfig_a_SOURCES = config.c
+libconfig_a_CFLAGS=-I $(top_builddir)/include/lib

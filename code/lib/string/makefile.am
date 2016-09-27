@@ -1,0 +1,4 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libstring.a   
+libstring_a_SOURCES = string.c
+libstring_a_CFLAGS=-I $(top_builddir)/include/lib

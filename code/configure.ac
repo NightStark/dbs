@@ -53,5 +53,19 @@ AC_CHECK_FUNCS([alarm bzero clock_gettime dup2 fdatasync ftruncate gethostbyname
 AC_CONFIG_FILES([lib/Action/makefile
                  lib/client/makefile
                  lib/common/makefile
-                 lib/makefile])
+                 lib/config/makefile
+                 lib/dataop/makefile
+                 lib/fsm/makefile
+                 lib/log/makefile
+                 lib/makefile
+                 lib/msg/makefile
+                 lib/net/makefile
+                 lib/openssl/makefile
+                 lib/process/makefile
+                 lib/resource/makefile
+                 lib/server/makefile
+                 lib/sm/makefile
+                 lib/string/makefile
+                 lib/thread/makefile
+                 lib/trigger/makefile])
 AC_OUTPUT

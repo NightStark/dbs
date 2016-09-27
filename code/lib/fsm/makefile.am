@@ -1,0 +1,4 @@
+AUTOMAKE_OPTIONS=foreign
+noinst_LIBRARIES=libfsm.a   
+libfsm_a_SOURCES = fsm_init.c fsm_msg_proc.c
+libfsm_a_CFLAGS=-I $(top_builddir)/include/lib
