@@ -482,10 +482,9 @@ struct sk_buff *bhudns_skb_new_udp_pack(int is_v6,
             udph->check = CSUM_MANGLED_0;
     } else {
         /* copy from linux kernel: udp_v6_push_pending_frames() */
-        __wsum csum = csum_partial(skb_transport_header(skb),
-                sizeof(struct udphdr), 0);
+        __wsum csum = csum_partial(skb_transport_header(skb), udp_len, 0);
         udph->check = csum_ipv6_magic(&(v6hdr->daddr), &(v6hdr->saddr), /* v6hdr's src as rsp_v6hdr's dst*/
-                udph->len, IPPROTO_UDP, csum);
+                udp_len, IPPROTO_UDP, csum);
     }
     
     if (!is_v6) {
