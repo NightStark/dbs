@@ -494,7 +494,7 @@ make_tempname (char *filename)
   char *tmpname = template_in_dir (filename);
   int fd;
 
-#ifdef HAVE_MKSTEMP
+#if 1//HAVE_MKSTEMP
   fd = mkstemp (tmpname);
 #else
   tmpname = mktemp (tmpname);
@@ -516,7 +516,8 @@ make_tempdir (char *filename)
 {
   char *tmpname = template_in_dir (filename);
 
-#ifdef HAVE_MKDTEMP
+//#ifdef HAVE_MKDTEMP
+#if 1
   return mkdtemp (tmpname);
 #else
   tmpname = mktemp (tmpname);

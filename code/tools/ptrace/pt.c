@@ -615,7 +615,7 @@ int main(int argc , char *argv[])
     trace_mod_attach(&trace_line_list_head, &proc_maps_head);
 
 
-    char cmd_buf[128];
+    //char cmd_buf[128];
     struct trace_line *t_line = NULL;
     printf("%s %d ----------------------------.\n", __func__, __LINE__);
     list_for_each_entry(t_line, &trace_line_list_head, node) {

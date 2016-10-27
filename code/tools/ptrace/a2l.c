@@ -36,18 +36,23 @@
 #include "getopt.h"
 #include "libiberty.h"
 #include "demangle.h"
-//#include "bucomm.h"
+#include "bucomm.h"
 
 static bfd_boolean unwind_inlines;	/* -i, unwind inlined functions. */
 static bfd_boolean with_functions;	/* -f, show function names.  */
 static bfd_boolean do_demangle;		/* -C, demangle names.  */
 static bfd_boolean base_names;		/* -s, strip directory names.  */
 
+#if 0
 static int naddr;		/* Number of addresses to process.  */
 static char **addr;		/* Hex addresses to process.  */
+#endif
 
 static asymbol **syms;		/* Symbol table.  */
 
+off_t get_file_size (const char * file_name);
+
+#if 0
 static struct option long_options[] =
 {
   {"basenames", no_argument, NULL, 's'},
@@ -61,8 +66,9 @@ static struct option long_options[] =
   {"version", no_argument, NULL, 'V'},
   {0, no_argument, 0, 0}
 };
+#endif
 
-static void usage (FILE *, int);
+//static void usage (FILE *, int);
 static void slurp_symtab (bfd *);
 static void find_address_in_section (bfd *, asection *, void *);
 static void find_offset_in_section (bfd *, asection *);
@@ -73,6 +79,7 @@ translate_addresses (bfd *abfd, asection *section, char *addr_str);
 /* Print a usage message to STREAM and exit with STATUS.  */
 
 char *program_name;
+#if 0
 static void
 usage (FILE *stream, int status)
 {
@@ -92,13 +99,14 @@ usage (FILE *stream, int status)
   -v --version           Display the program's version\n\
 \n"));
 
-  list_supported_targets (program_name, stream);
+  //list_supported_targets (program_name, stream);
   /*
   if (REPORT_BUGS_TO[0] && status == 0)
     fprintf (stream, _("Report bugs to %s\n"), REPORT_BUGS_TO);
   exit (status);
   */
 }
+#endif
 
 /* Read in the symbol table.  */
 
@@ -183,9 +191,9 @@ find_offset_in_section (bfd *abfd, asection *section)
 static void
 translate_addresses (bfd *abfd, asection *section, char *addr_str)
 {
-    int read_stdin = (naddr == 0);
-
     /*
+    int read_stdin = (naddr == 0);
+    
     for (;;)
     {
         if (read_stdin)
