@@ -22,5 +22,6 @@ typedef struct tag_thrd_quemsg_data_task_dispatch
 }THRD_QUEMSG_DATA_TASK_DISPATCH_S;
 
 ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs);
+ULONG Server_Task_Handle(VOID *pQueMsgData);
 
 #endif //__NS_TASK_H__

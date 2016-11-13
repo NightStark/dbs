@@ -35,6 +35,60 @@ pthread_cond_t  g_ThrdTaskWait_cond;  			/* 线程[唤醒条件]锁 */
 #define NS_TASK_UNLOCK \
     pthread_mutex_unlock(&g_Task_mutex)
 
+STATIC NS_TASK_INFO * Server_Task_GetByTaskId(UINT uiTaskId) 
+{
+
+    NS_TASK_INFO *pstTask = NULL;
+    
+    NS_TASK_LOCK;
+    DCL_FOREACH_ENTRY(&g_stTaskPendHead, pstTask, stNodeTask) {
+        if (pstTask->uiTaskId == uiTaskId) {
+            NS_TASK_UNLOCK;
+            return pstTask;
+        }
+    }
+    NS_TASK_UNLOCK;
+
+    return NULL;
+}
+
+ULONG Server_Task_Handle(VOID *pQueMsgData)
+{
+    pfTaskFunc pfTask = NULL;
+    NS_TASK_INFO *pstTask = NULL;
+	THRD_QUEMSG_DATA_TASK_DISPATCH_S  *pstTaskDisMsg = NULL;
+
+    pstTaskDisMsg = (THRD_QUEMSG_DATA_TASK_DISPATCH_S *)pQueMsgData;
+    MSG_PRINTF("task id:%d is handled.", pstTaskDisMsg->uiTaskId);
+
+
+    MSG_PRINTF("---------------------------------.");
+    pstTask = Server_Task_GetByTaskId(pstTaskDisMsg->uiTaskId);
+    if (pstTask == NULL) {
+        ERR_PRINTF("invalid task ID. can find task info");
+        return ERROR_FAILE;
+    }
+    NS_TASK_LOCK;
+    MSG_PRINTF("---------------------------------.");
+    /* 从pend表已到  处理中  的表去 */
+    DCL_Del(&(pstTask->stNodeTask));
+    DCL_AddTail(&g_stTaskHead, &(pstTask->stNodeTask));
+    pfTask = pstTask->pfTask;
+    MSG_PRINTF("--------pfTask=0x%X--------------.", pstTask->pfTask);
+    NS_TASK_UNLOCK;
+
+    MSG_PRINTF("--------pfTask=0x%X--------------.", pfTask);
+    if (pfTask != NULL) {
+        pfTask(pstTask);
+    }
+    MSG_PRINTF("---------------------------------.");
+
+    free(pstTaskDisMsg);
+    pstTaskDisMsg = NULL;
+    
+    return ERROR_SUCCESS;
+}
+
 ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
 {
     NS_TASK_INFO *pstTask = NULL; 
@@ -67,7 +121,7 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
     return ERROR_SUCCESS;
 }
 
-NS_TASK_INFO * Server_Task_GetNext(NS_TASK_INFO *pstTaskPre) 
+STATIC NS_TASK_INFO * Server_Task_GetNext(NS_TASK_INFO *pstTaskPre) 
 {
     /* the check is do at DCL_FIRST_ENTRY and DCL_NEXT_ENTRY functions
     if (DCL_IS_EMPTY(&g_stTaskPendHead) && DCL_IS_END(&g_stTaskPendHead, &(pstTaskPre->stNodeTask))) {
@@ -82,19 +136,26 @@ NS_TASK_INFO * Server_Task_GetNext(NS_TASK_INFO *pstTaskPre)
     return DCL_NEXT_ENTRY(&g_stTaskPendHead, pstTaskPre, stNodeTask);
 }
 
-ULONG server_task_dispatchToWorkThrd(INT iDestThrdId, NS_TASK_INFO *pstTask)
+STATIC ULONG server_task_dispatchToWorkThrd(INT iDestThrdId, NS_TASK_INFO *pstTask)
 {
     THREAD_QUEMSG_DATA_S stThrdQueMsg;
-	THRD_QUEMSG_DATA_TASK_DISPATCH_S  stTaskDisMsg;
+	THRD_QUEMSG_DATA_TASK_DISPATCH_S  *pstTaskDisMsg = NULL;
 
     mem_set0(&stThrdQueMsg, sizeof(THREAD_QUEMSG_DATA_S));
-    mem_set0(&stTaskDisMsg, sizeof(THRD_QUEMSG_DATA_TASK_DISPATCH_S));
 
-    stTaskDisMsg.uiTaskId = pstTask->uiTaskId;
+    pstTaskDisMsg = malloc(sizeof(THRD_QUEMSG_DATA_TASK_DISPATCH_S));
+    if (pstTaskDisMsg == NULL) {
+        ERR_PRINTF("oom.");
+        return ERROR_FAILE;
+    }
+
+    mem_set0(pstTaskDisMsg, sizeof(THRD_QUEMSG_DATA_TASK_DISPATCH_S));
+
+    pstTaskDisMsg->uiTaskId = pstTask->uiTaskId;
 
     stThrdQueMsg.uiQueMsgDataLen  = sizeof(THRD_QUEMSG_DATA_TASK_DISPATCH_S);
     stThrdQueMsg.uiQueMsgType     = THRD_QUEMSG_TYPE_TASK_DISPATCH;
-    stThrdQueMsg.pQueMsgData      = (VOID *)&stTaskDisMsg;
+    stThrdQueMsg.pQueMsgData      = (VOID *)pstTaskDisMsg;
 
     return THREAD_server_QueMsg_Send(iDestThrdId, &(stThrdQueMsg));
 }
@@ -111,7 +172,7 @@ STATIC ULONG _Server_do_TaskDispatch(VOID)
             break;
         }
         //TEST
-        //pstTask->pfTask(pstTask);
+        pstTask->pfTask(pstTask);
         pstWorkThrd = Thread_server_GetByThreadType(THREAD_TYPE_WORK_SERVER);
         DBGASSERT(NULL != pstWorkThrd);
 
@@ -169,6 +230,9 @@ ULONG Server_TaskDispatch_Init(VOID *arg)
 {
 
     DCL_Init(&g_stTaskPendHead);
+    DCL_Init(&g_stTaskHead);
+    DCL_Init(&g_stTaskProccessedHead);
+
     g_ulTaskIDPollFd = CreateIDPool(NS_TASK_COUNT_MAX);
     if (g_ulTaskIDPollFd < 0) {
         ERR_PRINTF("create id pool failed.");
@@ -182,3 +246,4 @@ ULONG Server_TaskDispatch_Init(VOID *arg)
 
     return ERROR_SUCCESS;
 }
+

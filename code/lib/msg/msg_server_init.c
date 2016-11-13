@@ -27,6 +27,7 @@
 #include <ns_msg.h>
 #include <ns_server.h>
 #include <ns_ssl.h>
+#include <ns_task.h>
 
 #define SERVER_LINK_KEEPALIVE_IDEL  (50)
 #define SERVER_LINK_KEEPALIVE_INTVL (1)
@@ -38,6 +39,13 @@ INT 				g_epollFdServer = 0;
 VOID msg_server_QueMsgRecv(IN INT iThreadId, IN const THREAD_QUEMSG_DATA_S *pstT)
 {
     MSG_PRINTF("**** Recv Que MSg ****");
+    //THRD_QUEMSG_TYPE_TASK_DISPATCH
+    switch(pstT->uiQueMsgType) {
+        case THRD_QUEMSG_TYPE_TASK_DISPATCH:
+            Server_Task_Handle(pstT->pQueMsgData);
+            break;
+        default:;
+    }
 }
 
 
@@ -319,9 +327,9 @@ ULONG MSG_server_Thread_Init(VOID *arg)
     return ERROR_SUCCESS;
 }
 
-STATIC ULONG MSG_server_Thread_task_dispatch_Init(VOID *arg)
+STATIC VOID * MSG_server_Thread_task_dispatch_Init(VOID *arg)
 {
-    return Server_TaskDispatch_Init(arg);
+    return (VOID *)Server_TaskDispatch_Init(arg);
 
     //return ERROR_SUCCESS;
 }
