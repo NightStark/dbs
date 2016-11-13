@@ -21,8 +21,11 @@
 
 #define NS_TASK_COUNT_MAX (1024)
 
+/* 这些全局变量可以放到一个结构体里，OOP下 */
 ULONG      g_ulTaskIDPollFd = -1;
-DCL_HEAD_S g_stTaskHead;
+DCL_HEAD_S g_stTaskPendHead;            /* 未被处理的task列表 */
+DCL_HEAD_S g_stTaskHead;                /* 在 处理中 的task列表 */
+DCL_HEAD_S g_stTaskProccessedHead;      /* 被 处理过 的task列表 */
 pthread_mutex_t g_Task_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t g_ThrdTaskWait_mutex = PTHREAD_MUTEX_INITIALIZER;  		    /* 线程[等待]锁 */
 pthread_cond_t  g_ThrdTaskWait_cond;  			/* 线程[唤醒条件]锁 */
@@ -36,7 +39,7 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
 {
     NS_TASK_INFO *pstTask = NULL; 
 
-    if (g_stTaskHead.uiLiLiLength >= NS_TASK_COUNT_MAX) {
+    if (g_stTaskPendHead.uiLiLiLength >= NS_TASK_COUNT_MAX) {
         ERR_PRINTF("ns task is too many.");
         return ERROR_FAILE;
     }
@@ -53,7 +56,7 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
     DBGASSERT(pstTask->uiTaskId >= 0); 
 
     NS_TASK_LOCK;
-    DCL_AddTail(&g_stTaskHead, &(pstTask->stNodeTask));
+    DCL_AddTail(&g_stTaskPendHead, &(pstTask->stNodeTask));
     NS_TASK_UNLOCK;
 
     /* wake up dispatch thread, maybe he iw wait */
@@ -66,31 +69,55 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
 
 NS_TASK_INFO * Server_Task_GetNext(NS_TASK_INFO *pstTaskPre) 
 {
-    NS_TASK_INFO *pstTask = NULL;
-
-    if (DCL_IS_EMPTY(&g_stTaskHead)) {
+    /* the check is do at DCL_FIRST_ENTRY and DCL_NEXT_ENTRY functions
+    if (DCL_IS_EMPTY(&g_stTaskPendHead) && DCL_IS_END(&g_stTaskPendHead, &(pstTaskPre->stNodeTask))) {
         return NULL;
     }
+    */
 
     if (pstTaskPre == NULL) {
-        pstTask = DCL_FIRST_ENTRY(&g_stTaskHead, pstTask, stNodeTask);
-    } else {
-        pstTask = DCL_NEXT_ENTRY(&g_stTaskHead, pstTask, stNodeTask);
+        return DCL_FIRST_ENTRY(&g_stTaskPendHead, pstTaskPre, stNodeTask);
     }
 
-    return pstTask;
+    return DCL_NEXT_ENTRY(&g_stTaskPendHead, pstTaskPre, stNodeTask);
+}
+
+ULONG server_task_dispatchToWorkThrd(INT iDestThrdId, NS_TASK_INFO *pstTask)
+{
+    THREAD_QUEMSG_DATA_S stThrdQueMsg;
+	THRD_QUEMSG_DATA_TASK_DISPATCH_S  stTaskDisMsg;
+
+    mem_set0(&stThrdQueMsg, sizeof(THREAD_QUEMSG_DATA_S));
+    mem_set0(&stTaskDisMsg, sizeof(THRD_QUEMSG_DATA_TASK_DISPATCH_S));
+
+    stTaskDisMsg.uiTaskId = pstTask->uiTaskId;
+
+    stThrdQueMsg.uiQueMsgDataLen  = sizeof(THRD_QUEMSG_DATA_TASK_DISPATCH_S);
+    stThrdQueMsg.uiQueMsgType     = THRD_QUEMSG_TYPE_TASK_DISPATCH;
+    stThrdQueMsg.pQueMsgData      = (VOID *)&stTaskDisMsg;
+
+    return THREAD_server_QueMsg_Send(iDestThrdId, &(stThrdQueMsg));
 }
 
 STATIC ULONG _Server_do_TaskDispatch(VOID)
 {
+	THREAD_INFO_S *pstWorkThrd = NULL;
     NS_TASK_INFO *pstTask = NULL;
 
+    NS_TASK_LOCK;
     while (1) {
         pstTask = Server_Task_GetNext(pstTask);
         if (pstTask == NULL) {
             break;
         }
+        //TEST
+        //pstTask->pfTask(pstTask);
+        pstWorkThrd = Thread_server_GetByThreadType(THREAD_TYPE_WORK_SERVER);
+        DBGASSERT(NULL != pstWorkThrd);
+
+        server_task_dispatchToWorkThrd(pstWorkThrd->iThreadID, pstTask);
     }
+    NS_TASK_UNLOCK;
 
     return ERROR_SUCCESS;
 }
@@ -100,6 +127,10 @@ STATIC ULONG Server_TaskDispatch_loop(VOID)
     ULONG  ulRet = -1;
 	struct timeval  now;
 	struct timespec outtime;
+	THREAD_INFO_S *pstThrd = NULL;
+
+    pstThrd = Thread_server_GetCurrent();
+    DBGASSERT(NULL != pstThrd);
 
     while (1) {
         mem_set0(&outtime, sizeof(struct timespec));
@@ -137,7 +168,7 @@ STATIC ULONG Server_TaskDispatch_loop(VOID)
 ULONG Server_TaskDispatch_Init(VOID *arg)
 {
 
-    DCL_Init(&g_stTaskHead);
+    DCL_Init(&g_stTaskPendHead);
     g_ulTaskIDPollFd = CreateIDPool(NS_TASK_COUNT_MAX);
     if (g_ulTaskIDPollFd < 0) {
         ERR_PRINTF("create id pool failed.");

@@ -10,6 +10,7 @@
 #include <ns_msg_server_link.h>
 #include <ns_msg.h>
 #include <ns_server.h>
+#include <ns_task.h>
 
 STATIC INT g_iSrvSMID = 0;
 
@@ -95,6 +96,14 @@ STATIC INT SRV_SM_EVT_Idle_hd_JonReq(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSME
     return ulRet;
 }
 
+ULONG _test_pfTaskFunc(VOID *args /* ==> (NS_TASK_INFO *) */) {
+    NS_TASK_INFO *pstTask = (NS_TASK_INFO *)args;
+
+    ERR_PRINTF("TEST");
+
+    return ERROR_SUCCESS;
+}
+
 STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSMEvt, VOID * args)
 {
     NS_MSG_ST *pstMsg;
@@ -156,6 +165,7 @@ STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN 
 
 
     //tell work thread to do some work.
+    Server_Task_Create(_test_pfTaskFunc, NULL);
     
     return ulRet;
 }

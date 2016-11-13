@@ -16,4 +16,11 @@ typedef struct tag_ns_task_info
     UINT uiThrdId; /* which thread is RUN */
 }NS_TASK_INFO;
 
+typedef struct tag_thrd_quemsg_data_task_dispatch
+{
+    UINT uiTaskId;
+}THRD_QUEMSG_DATA_TASK_DISPATCH_S;
+
+ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs);
+
 #endif //__NS_TASK_H__
