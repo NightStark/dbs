@@ -38,7 +38,6 @@ pthread_cond_t  g_ThrdTaskWait_cond;  			/* 线程[唤醒条件]锁 */
 
 STATIC NS_TASK_INFO * Server_Task_GetByTaskId(UINT uiTaskId) 
 {
-
     NS_TASK_INFO *pstTask = NULL;
     
     NS_TASK_LOCK;
