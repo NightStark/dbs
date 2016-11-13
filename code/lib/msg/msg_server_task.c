@@ -52,25 +52,21 @@ STATIC NS_TASK_INFO * Server_Task_GetByTaskId(UINT uiTaskId)
     return NULL;
 }
 
-/* work 线程调用，执行task */
-ULONG Server_Task_Handle(VOID *pQueMsgData)
+ULONG Server_Task_RunTask(ULONG uiTaskId)
 {
     pfTaskFunc pfTask = NULL;
     NS_TASK_INFO *pstTask = NULL;
-	THRD_QUEMSG_DATA_TASK_DISPATCH_S  *pstTaskDisMsg = NULL;
     THREAD_INFO_S *pstThrd = NULL;
 
     pstThrd = Thread_server_GetCurrent();
     DBGASSERT(NULL != pstThrd);
 
-    pstTaskDisMsg = (THRD_QUEMSG_DATA_TASK_DISPATCH_S *)pQueMsgData;
     MSG_PRINTF("task id:%d is handled (in work thread %d).", 
-            pstTaskDisMsg->uiTaskId, pstThrd->iThreadID);
-
-
+            uiTaskId, pstThrd->iThreadID);
+    
     /* this is a recursive lock call */
     NS_TASK_LOCK;
-    pstTask = Server_Task_GetByTaskId(pstTaskDisMsg->uiTaskId);
+    pstTask = Server_Task_GetByTaskId(uiTaskId);
     if (pstTask == NULL) {
         ERR_PRINTF("invalid task ID. can find task info");
         return ERROR_FAILE;
@@ -91,6 +87,19 @@ ULONG Server_Task_Handle(VOID *pQueMsgData)
     DCL_Del(&(pstTask->stNodeTask));
     DCL_AddTail(&g_stTaskProccessedHead, &(pstTask->stNodeTask));
     NS_TASK_UNLOCK;
+
+    return ERROR_SUCCESS;
+}
+
+/* work 线程调用，执行task */
+ULONG Server_Task_Handle(VOID *pQueMsgData)
+{
+	THRD_QUEMSG_DATA_TASK_DISPATCH_S  *pstTaskDisMsg = NULL;
+
+
+    pstTaskDisMsg = (THRD_QUEMSG_DATA_TASK_DISPATCH_S *)pQueMsgData;
+
+    Server_Task_RunTask(pstTaskDisMsg->uiTaskId);
 
     free(pstTaskDisMsg);
     pstTaskDisMsg = NULL;
