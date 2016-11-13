@@ -13,7 +13,7 @@ typedef struct tag_ns_task_info
     ULONG ulArgs[4];
     ULONG ulRetVal;
 
-    UINT uiThrdId; /* which thread is RUN */
+    UINT uiThrdId; /* which thread is RUN this task */
 }NS_TASK_INFO;
 
 typedef struct tag_thrd_quemsg_data_task_dispatch
