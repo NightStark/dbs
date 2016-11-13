@@ -285,6 +285,11 @@ INT CLT_SM_STATS_CHANGE(CLT_SM_ST *pstCltSM, CLT_SM_STATS_EN enCLtSMStatNow, VOI
     return iRet;
 }
 
+CLT_SM_STATS_EN CLT_SM_STATUS_GET(CLT_SM_ST *pstCltSM)
+{
+    return pstCltSM->enCltSMStats;
+}
+
 CLT_SM_ST * CLT_sm_CreateAndStart(VOID)
 {
     CLT_SM_ST *pstCltSM = NULL;

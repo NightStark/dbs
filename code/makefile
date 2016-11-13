@@ -161,7 +161,7 @@ $(TARGET_NSDB_C):$(OBJ_NSDB_C)
 #	cp $(TARGET_NSDB_C) /mnt/hgfs/SFDIR/
 
 $(TARGET_WEB_SRV):$(OBJ_WEBS) $(OBJ_NSDB_C) 
-	$(CC)  $(OBJ_WEBS) $(OBJ_NSDB_C) -l$(TARGET_SO_NAME) -L. -o $(TARGET_WEB_SRV) $(CFLAGS) -ldl	
+	$(CC)  $(OBJ_WEBS) $(OBJ_NSDB_C) -l$(TARGET_SO_NAME) -L. -o $(TARGET_WEB_SRV) $(CFLAGS) -ldl
 #	cp $(TARGET_SO_FILE) /opt/nfsroot/    
 #	cp $(TARGET_WEB_SRV) /opt/nfsroot/
 

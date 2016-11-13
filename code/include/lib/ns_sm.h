@@ -35,6 +35,7 @@ CLT_SM_ST * CLT_sm_CreateAndStart(VOID);
 INT CLT_sm_Stop(CLT_SM_ST *pstCltSm);
 VOID CLT_sm_Destroy(IN CLT_SM_ST *pstCltSm);
 INT CLT_SM_STATS_CHANGE(CLT_SM_ST *pstCltSM, CLT_SM_STATS_EN enCLtSMStatNow, VOID *args);
+CLT_SM_STATS_EN CLT_SM_STATUS_GET(CLT_SM_ST *pstCltSM);
 INT CLT_SM_EVT_HANDLE(IN CLT_SM_ST *pstCltSM, IN CLT_SM_EVT_EN enCltSmEvt, IN VOID * args);
 INT CLT_sm_init(void);
 

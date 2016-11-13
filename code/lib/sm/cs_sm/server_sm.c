@@ -153,6 +153,9 @@ STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN 
 
     MSG_Destroy(pstMsg);
     pstMsg = NULL;
+
+
+    //tell work thread to do some work.
     
     return ulRet;
 }

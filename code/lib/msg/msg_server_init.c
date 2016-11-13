@@ -282,6 +282,9 @@ ULONG MSG_server_MainThreadCallBack(IN UINT events, IN VOID *arg)
 }
 
 
+/*
+ * thread to listen client sock link connect, and msg.
+ * */
 ULONG MSG_server_Thread_Init(VOID *arg)
 {
     INT iSockFd;
@@ -316,6 +319,13 @@ ULONG MSG_server_Thread_Init(VOID *arg)
     return ERROR_SUCCESS;
 }
 
+STATIC ULONG MSG_server_Thread_task_dispatch_Init(VOID *arg)
+{
+    return Server_TaskDispatch_Init(arg);
+
+    //return ERROR_SUCCESS;
+}
+
 ULONG MSG_server_Init(VOID)
 {
     INT iIndex;
@@ -347,9 +357,21 @@ ULONG MSG_server_Init(VOID)
         return ERROR_FAILE;
     }
 
-	DBG_THRD_NAME_REG(iThreadId, "Server-Main");
+	DBG_THRD_NAME_REG(iThreadId, "Server-Main"); //TODO: as a para in fun Thread_server_CreateWithEpQMsg;
 
-    while(1) sleep(100);
+    //iThreadId = Thread_server_CreateWithEpQMsg(MSG_server_Thread_task_dispatch_Init, 
+    iThreadId = Thread_server_CreatWithMain(THREAD_TYPE_MAIN_SERVER, 
+                                            MSG_server_Thread_task_dispatch_Init, 
+                                            NULL);
+    if (-1 == iThreadId)
+    {
+        ERR_PRINTF("MAIN Thread Create Failed!");
+        return ERROR_FAILE;
+    }
+
+	DBG_THRD_NAME_REG(iThreadId, "Server-task-dispatch"); //TODO: as a para in fun Thread_server_CreateWithEpQMsg;
+
+    while(1) sleep(100); //TODO: good ?
     return ERROR_SUCCESS;
 }
 

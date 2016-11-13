@@ -195,6 +195,8 @@ VOID inline DCL_AddTail(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
 	pstNode->pstPrev->pstNext = pstNode;
 	pstHead->stNode.pstPrev   = pstNode;
 
+    pstHead->uiLiLiLength ++;
+
 	return;
 }
 

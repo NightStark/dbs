@@ -25,4 +25,6 @@ INT MSG_server_link_Down(IN INT iSockFd);
 ULONG Server_CreateClientTable(VOID);
 ULONG Server_DestroyClientTable(VOID);
 
+ULONG Server_TaskDispatch_Init(VOID *arg);
+
 #endif //__SERVER_H__

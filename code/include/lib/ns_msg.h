@@ -252,9 +252,10 @@ typedef enum tag_Msg_sub_type_list
     MSG_MNG_CONFIM,
     MSG_MNG_OK,
     MSG_MNG_END,
-    MSG_CTL_START = MSG_MNG_END,
+    MSG_CTL_START = MSG_MNG_END + 1,
+    MSG_CLT_ATTACH,
     MSG_CTL_END,
-    MSG_DAT_START = MSG_CTL_END,
+    MSG_DAT_START = MSG_CTL_END + 1,
     MSG_DAT_END,
 
     _MSG_SUB_MAX_,
