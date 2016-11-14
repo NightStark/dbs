@@ -18,6 +18,12 @@ static inline int __SSL_IS_INITED__(VOID)
 	return g_iSSLIsInit == 1;
 }
 
+/*
+ * 用下面这两个命令产生上述cacert.pem(公钥)和privkey.pem(私钥)文件：
+ * openssl genrsa -out privkey.pem 2048
+ * openssl req -new -x509 -key privkey.pem -out cacert.pem -days 1095
+ * */
+
 SSL * SERVER_SSL_link_create(INT iNewFd)
 {
 	SSL *pstSSL = NULL;
