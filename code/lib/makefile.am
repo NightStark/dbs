@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS=foreign
-SUBDIRS=Action client common config dataop fsm net netlink openssl
+SUBDIRS=Action client common config dataop fsm net netlink openssl msg log
 SUBDIRS+=process resource sm string thread trigger
 projectlibdir=./
 projectlib_PROGRAMS=libnsdb.so  
@@ -15,7 +15,7 @@ libnsdb_so_LDADD +=-lfsm    -Lfsm
 libnsdb_so_LDADD +=-llog    -Llog
 libnsdb_so_LDADD +=-lmsg    -Lmsg
 libnsdb_so_LDADD +=-lnet    -Lnet
-#libnsdb_so_LDADD +=-lnetlink -Lnetlink
+libnsdb_so_LDADD +=-lnetlink -Lnetlink
 libnsdb_so_LDADD +=-lossl   -Lopenssl
 libnsdb_so_LDADD +=-lprocess -Lprocess
 libnsdb_so_LDADD +=-lresource -Lresource

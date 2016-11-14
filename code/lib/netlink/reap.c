@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 
 #include "knetlink.h"
-#include "up.h"
+#include "../../kernel/mod_up/up.h"
 
 static struct knl_handle g_reap_kh = { .fd = -1 }; 
 

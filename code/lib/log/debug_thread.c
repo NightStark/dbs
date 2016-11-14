@@ -25,6 +25,7 @@
 #include <sys/epoll.h>
 #ifndef NS_EVENTFD
 #include <sys/eventfd.h>
+#include <bits/eventfd.h>
 #endif
 #include <signal.h>
 

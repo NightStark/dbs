@@ -60,6 +60,7 @@ AC_CONFIG_FILES([lib/Action/makefile
                  lib/makefile
                  lib/msg/makefile
                  lib/net/makefile
+                 lib/netlink/makefile
                  lib/openssl/makefile
                  lib/process/makefile
                  lib/resource/makefile
@@ -67,5 +68,7 @@ AC_CONFIG_FILES([lib/Action/makefile
                  lib/sm/makefile
                  lib/string/makefile
                  lib/thread/makefile
-                 lib/trigger/makefile])
+                 lib/trigger/makefile
+                 web/makefile
+                 web/http/makefile])
 AC_OUTPUT

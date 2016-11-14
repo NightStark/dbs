@@ -5,6 +5,10 @@
 
 #include <ns_base.h>
 
+#include <ns_thread_quemsg.h>
+#include <ns_thread_quemsg.h>
+#include <ns_web_server.h>
+#include <ns_web_action.h>
 #include <ns_trigger.h>
 
 VOID quemsg_trigeer_cl_AddData(IN INT iSrcThrdId, IN const THREAD_QUEMSG_DATA_S *pstThrdQueMsg)
@@ -21,7 +25,7 @@ QUEMSG_TRIGGER_FUN g_TriggerClientLinkList[THREAD_QUEMSG_CLIENT_LINK_TYPE_MAX] =
 
 QUEMSG_TRIGGER_FUN g_TriggerActionList[] = 
 {
-	[] = quemsg_trigeer_cl_AddData,
+	//[] = quemsg_trigeer_cl_AddData,
 }
 
 THREAD_TYPE_MAIN_SERVER,

@@ -14,6 +14,7 @@
 #include <sys/epoll.h>
 #ifndef NS_EVENTFD
 #include <sys/eventfd.h>
+#include <bits/eventfd.h>
 #endif
 #include <sys/time.h>
 #include <errno.h>

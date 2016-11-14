@@ -2,4 +2,4 @@ AUTOMAKE_OPTIONS=foreign
 noinst_LIBRARIES=libnetlink.a   
 libnetlink_a_SOURCES  = knetlink.c
 libnetlink_a_SOURCES += reap.c
-libnetlink_a_CFLAGS=-I $(top_builddir)/include/lib -I $(top_builddir)/kernel/mod_up
+libnetlink_a_CFLAGS=-I $(top_builddir)/include/lib 
