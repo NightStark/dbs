@@ -264,6 +264,8 @@ typedef enum tag_Msg_sub_type_list
 /* type in msg list 注意区别 MSG_SUB_TYPE_EN中的MSG_DAT_xxx 
  * 此处为消息结构类型，相当于sub-sub，三级类型。
  * */
+#include <ns_msg_type.h>
+#if 0 //move to <ns_msg_type.h> file
 typedef enum tag_Msg_msg_type 
 {
 	MSG_MSG_TYPE_START = _MSG_SUB_MAX_,
@@ -303,12 +305,7 @@ typedef struct tag_msg_ctl_attach
     UINT uiCmdID;
 }MSG_CTL_ATTACH_ST;
 
-/************* MSG_MSG_TYPE  message struct defines START*****************/
-typedef struct tag_mmt_devinfo
-{
-	UCHAR ucMac[6];
-}MMT_DEV_INFO_ST;
-/************* MSG_MSG_TYPE  message struct defines END  *****************/
+#endif
 
 UINT NS_MSG_DATA_ENCODE_USHORT (INOUT UCHAR *pucBufStart, USHORT usData);
 UINT NS_MSG_DATA_ENCODE_UINT (INOUT UCHAR *pucBufStart, UINT uiData);
@@ -381,5 +378,15 @@ INT CLIENT_MSG_recv(MSG_CLT_LINK_ST *pstCltLink, VOID *pRecvBuf, INT iBufLen);
 INT SERVER_MSG_send(IN MSG_SRV_LINK_ST *pstSrvLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
 INT CLIENT_MSG_send(IN MSG_CLT_LINK_ST *pstCltLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
 
-ULONG MSG_desc_reg(VOID);
+#define NS_MSG_DESC_REG(stype) \
+    MSG_Desc_Register(stype, \
+            sizeof(stype##_ST), \
+            MSG_DATA_encode_TLV_##stype,  \
+            MSG_DATA_decode_TLV_##stype)
+
+#define NS_MSG_DATA_ENCODE_TLV(stype) \
+    STATIC UINT MSG_DATA_encode_TLV_##stype(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+#define NS_MSG_DATA_DECODE_TLV(stype) \
+    STATIC UINT MSG_DATA_decode_TLV_##stype(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+
 #endif //__MSG_H__

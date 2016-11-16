@@ -11,7 +11,7 @@
 #include <ns_msg.h>
 #include <ns_sm.h>
 
-STATIC UINT MSG_DATA_encode_TLV_JoinReq(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+NS_MSG_DATA_ENCODE_TLV(MSG_MNG_JOIN_RESP)
 {
     UINT uiOffset = 0;
     MSG_MNG_JOIN_REQ_ST *pstJoinReq = NULL;
@@ -28,7 +28,7 @@ STATIC UINT MSG_DATA_encode_TLV_JoinReq(IN VOID *pStruct,   OUT VOID *pDataFlow,
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_decode_TLV_JoinReq(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+NS_MSG_DATA_DECODE_TLV(MSG_MNG_JOIN_RESP)
 {
     UINT uiOffset = 0;
     MSG_MNG_JOIN_REQ_ST *pstJoinReq = NULL;
@@ -175,10 +175,12 @@ ULONG MSG_desc_reg(VOID)
 {
     MSG_Desc_Init();
 
+/*
     MSG_Desc_Register(MSG_MNG_JOIN_REQ, 
             sizeof(MSG_MNG_JOIN_REQ_ST), 
             MSG_DATA_encode_TLV_JoinReq, 
             MSG_DATA_decode_TLV_JoinReq); 
+            */
     MSG_Desc_Register(MSG_MNG_JOIN_RESP, 
             sizeof(MSG_MNG_JOIN_RESP_ST), 
             MSG_DATA_encode_TLV_JoinResp, 
@@ -191,11 +193,12 @@ ULONG MSG_desc_reg(VOID)
             sizeof(MSG_MNG_OK_ST), 
             MSG_DATA_encode_TLV_OK, 
             MSG_DATA_decode_TLV_OK); 
-
     MSG_Desc_Register(MSG_CTL_ATTACH, 
             sizeof(MSG_CTL_ATTACH_ST), 
             MSG_DATA_encode_CTL_ATTACH, 
             MSG_DATA_decode_CTL_ATTACH); 
+
+            NS_MSG_DESC_REG(MSG_MNG_JOIN_RESP);
 
     return ERROR_SUCCESS;
 }
