@@ -81,7 +81,9 @@ STATIC ULONG MSG_Client_RECV_HandleCtlMsg(IN INT iConnFd, IN NS_MSG_ST *pstMsg)
     DBGASSERT(iConnFd == pstMsgCltLink->iSockFd);
 
     switch (pstMsg->usSubType) {
-        case MSG_CLT_ATTACH:
+        case MSG_CTL_ATTACH:
+            MSG_PRINTF("get ATTACH.");
+            MSG_clinet_ctl_recv_attach(pstMsgCltLink, pstMsg);
             break;
         default:
             ERR_PRINTF("Invalid Sub msg type!");

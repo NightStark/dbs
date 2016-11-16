@@ -253,7 +253,7 @@ typedef enum tag_Msg_sub_type_list
     MSG_MNG_OK,
     MSG_MNG_END,
     MSG_CTL_START = MSG_MNG_END + 1,
-    MSG_CLT_ATTACH,
+    MSG_CTL_ATTACH,
     MSG_CTL_END,
     MSG_DAT_START = MSG_CTL_END + 1,
     MSG_DAT_END,
@@ -294,6 +294,14 @@ typedef struct tag_msg_mng_ok
 {
     UINT uiOKID;
 }MSG_MNG_OK_ST;
+
+
+typedef struct tag_msg_ctl_attach
+{
+    UINT uiAttachMode; /* client mode: slave, mange, server. */
+    UINT uiCmdVer; 
+    UINT uiCmdID;
+}MSG_CTL_ATTACH_ST;
 
 /************* MSG_MSG_TYPE  message struct defines START*****************/
 typedef struct tag_mmt_devinfo

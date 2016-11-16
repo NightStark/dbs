@@ -124,7 +124,7 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
     }
 
     pstTask->pfTask    = pfTask;
-    pstTask->ulArgs[0] = (ULONG)pArgs;
+    pstTask->ulArgs[0] = (ULONG)pArgs; //now, only use [0]
     pstTask->uiTaskId  = AllocID(g_ulTaskIDPollFd, 1);
     DBGASSERT(pstTask->uiTaskId >= 0); 
 

@@ -96,12 +96,16 @@ STATIC INT SRV_SM_EVT_Idle_hd_JonReq(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSME
     return ulRet;
 }
 
-ULONG _test_pfTaskFunc(VOID *args /* ==> (NS_TASK_INFO *) */) {
-    NS_TASK_INFO *pstTask = (NS_TASK_INFO *)args;
+STATIC ULONG _attach_client_TaskFunc(VOID *args /* ==> (NS_TASK_INFO *) */) {
+    NS_TASK_INFO    *pstTask    = NULL;
+    MSG_SRV_LINK_ST *pstSrvLink = NULL;
 
-    ERR_PRINTF("TEST");
+    DBGASSERT(args != NULL);
 
-    return ERROR_SUCCESS;
+    pstTask = (NS_TASK_INFO *)args;
+    pstSrvLink = (MSG_SRV_LINK_ST *)pstTask->ulArgs[0];
+
+   return MSG_server_ctl_send_attach(pstSrvLink); 
 }
 
 STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSMEvt, VOID * args)
@@ -165,7 +169,10 @@ STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN 
 
 
     //tell work thread to do some work.
-    Server_Task_Create(_test_pfTaskFunc, NULL);
+    ulRet = Server_Task_Create(_attach_client_TaskFunc, pstSrvLink);
+    if (ulRet != ERROR_SUCCESS) {
+        ERR_PRINTF("create tesk failed.");
+    }
     
     return ulRet;
 }

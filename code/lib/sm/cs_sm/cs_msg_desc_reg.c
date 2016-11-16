@@ -137,6 +137,40 @@ STATIC UINT MSG_DATA_decode_TLV_OK(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OU
     return uiOffset;
 }
 
+STATIC UINT MSG_DATA_encode_CTL_ATTACH(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+{
+    UINT uiOffset = 0;
+    MSG_CTL_ATTACH_ST *pstStruct = NULL;
+
+    DBGASSERT(NULL != pStruct);
+    DBGASSERT(NULL != pDataFlow);
+    
+    pstStruct= (MSG_CTL_ATTACH_ST *)pStruct;
+
+    uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, pstStruct->uiAttachMode);
+    uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, pstStruct->uiCmdVer);
+    uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, pstStruct->uiCmdID);
+
+    return uiOffset;
+}
+
+STATIC UINT MSG_DATA_decode_CTL_ATTACH(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+{
+    UINT uiOffset = 0;
+    MSG_CTL_ATTACH_ST *pstStruct = NULL;
+
+    DBGASSERT(NULL != pStruct);
+    DBGASSERT(NULL != pDataFlow);
+    
+    pstStruct= (MSG_CTL_ATTACH_ST*)pStruct;
+
+    uiOffset += NS_MSG_DATA_DECODE_UINT(pDataFlow + uiOffset, &pstStruct->uiAttachMode);
+    uiOffset += NS_MSG_DATA_DECODE_UINT(pDataFlow + uiOffset, &pstStruct->uiCmdVer);
+    uiOffset += NS_MSG_DATA_DECODE_UINT(pDataFlow + uiOffset, &pstStruct->uiCmdID);
+
+    return uiOffset;
+}
+
 ULONG MSG_desc_reg(VOID)
 {
     MSG_Desc_Init();
@@ -157,6 +191,11 @@ ULONG MSG_desc_reg(VOID)
             sizeof(MSG_MNG_OK_ST), 
             MSG_DATA_encode_TLV_OK, 
             MSG_DATA_decode_TLV_OK); 
+
+    MSG_Desc_Register(MSG_CTL_ATTACH, 
+            sizeof(MSG_CTL_ATTACH_ST), 
+            MSG_DATA_encode_CTL_ATTACH, 
+            MSG_DATA_decode_CTL_ATTACH); 
 
     return ERROR_SUCCESS;
 }
