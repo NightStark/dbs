@@ -174,7 +174,14 @@ STATIC ULONG _MSG_AddData (IN NS_MSG_ST *pstNsMsg, IN NS_MSG_DATA_DESC_ST *pstMs
             ERR_PRINTF("malloc failed.");
             goto err_msd; 
         }
-        uiRet = pstMsgDesc->pfEncodeTLV(pstMsgDesc->pDataStruct, pstMsgDesc->pDataFlow, uiDataFlowLen); 
+        if (pstMsgDesc->pfEncodeTLV) {
+            uiRet = pstMsgDesc->pfEncodeTLV(pstMsgDesc->pDataStruct, pstMsgDesc->pDataFlow, uiDataFlowLen); 
+        } else {
+            uiRet = MSG_DATA_encode_TLV_normal(pstMsgDesc->pDataStruct, 
+            pstMsgDesc->pDataFlow, 
+            uiDataFlowLen,
+            pstMsgDesc->uiDataType);
+        }
         if (uiRet <= 0) {
             ERR_PRINTF("encode msg for msg %d failed.", pstMsgDesc->uiDataType);
             goto err_msd; 
@@ -262,7 +269,14 @@ ULONG _MSG_GetData (IN NS_MSG_ST *pstNsMsg, IN NS_MSG_DATA_DESC_ST *pstMsgDesc)
         if (pstMsgData->uiDataType == pstMsgDesc->uiDataType) {
             //pstMsgDesc->pDataFlow;
             pstMsgDesc->uiDataLen = pstMsgData->uiDataLen;
-            pstMsgDesc->pfDecodeTVL(pstMsgData->pDataFlow, pstMsgData->uiDataLen, pstMsgDesc->pDataStruct);
+            if (pstMsgDesc->pfDecodeTVL) {
+                pstMsgDesc->pfDecodeTVL(pstMsgData->pDataFlow, pstMsgData->uiDataLen, pstMsgDesc->pDataStruct);
+            } else {
+                MSG_DATA_decode_TLV_normal(pstMsgData->pDataFlow, 
+                                           pstMsgData->uiDataLen, 
+                                           pstMsgDesc->pDataStruct,
+                                           pstMsgDesc->uiDataType);
+            }
             //TODO:TBD: will del and free .?
             
             return ERROR_SUCCESS;

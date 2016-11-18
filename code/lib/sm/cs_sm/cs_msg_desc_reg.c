@@ -191,6 +191,59 @@ typedef struct tag_typeDescList
 
 STATIC TYPE_DESC_LIST_ST g_stMsgTypeDescList;
 
+UINT MSG_DATA_encode_TLV_normal(IN VOID *pStruct, OUT VOID *pDataFlow, UINT uiDataFlowLen, INT iMsgType)
+{
+    CHAR *pST = NULL;
+    INT  iDesc = NULL;
+    UINT uiOffset = 0;
+    UINT uiStOffset = 0;
+    ANY_TYPE_EN enType = 0;
+
+    pST = (CHAR *)pStruct;
+
+    iDesc = g_stMsgTypeDescList.aiTypeDescMap[iMsgType];
+    iDesc ++;
+    enType = g_aiTypeDescList[iDesc];
+    switch (enType)
+    {
+        case AT_CHAR:
+        case AT_UCHAR:
+        case AT_SZ:
+        case AT_SHORT:
+        case AT_USHORT:
+        case AT_INT:
+            uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, *((CHAR*)(pST + uiStOffset)));
+            uiStOffset += sizeof(CHAR);
+            break;
+        case AT_UINT:
+            uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, *((UINT*)(pST + uiStOffset)));
+            uiStOffset += sizeof(UINT);
+            break;
+        case AT_LONG:
+        case AT_ULONG:
+        case AT_LLONG:
+        case AT_ULLONG:
+        case AT_FLOAT:
+        case AT_DOUBLE:
+        case AT_BOOL_T:
+        case AT_NONE:
+        defalut:;
+    }
+
+    return uiOffset;
+}
+
+UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct, INT iMsgType)
+{
+    INT  iDesc = NULL;
+    UINT uiOffset = 0;
+    UINT uiTypeLen = 0;
+
+    iDesc = g_stMsgTypeDescList.aiTypeDescMap[iMsgType];
+    
+    //uiOffset += NS_MSG_DATA_DECODE_UINT(pDataFlow + uiOffset, pstStruct + );
+}
+
 ULONG MSG_desc_reg(VOID)
 {
     MSG_Desc_Init();

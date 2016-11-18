@@ -104,12 +104,21 @@ ULONG read_MsgType(VOID)
                 if (pcPos != NULL) {
                     pcPos[0] = '\0';
                     //printf("%s ,", pcPos);
-                    INT i = 0;
-                    pcPos = NULL;
-                    pcPos++;
+                    INT i          = 0;
+                    CHAR *pcEnd    = NULL;
+                    INT  iArrayLen = 0;
                     /* is a array */
-                    if (strstr(pcPos, "[")) {
+                    pcPos++;
+                    pcPos = strstr(pcPos, "[");
+                    if (pcPos != NULL) {
+                        pcEnd = strstr(pcPos, "]");
+                        if (pcEnd != NULL) {
+                            pcPos++;
+                            pcEnd = '\0';
+                            iArrayLen = atoi(pcPos);
+                        }
                     }
+                    pcPos = NULL;
                     while(i < ARRAY_SIZE(types_str_list)) {
                         pcPos = strstr(acBufLine, types_str_list[i]);
                         if (pcPos != NULL) {
@@ -120,7 +129,12 @@ ULONG read_MsgType(VOID)
                     if (pcPos != NULL) {
                         //printf("\t\t%d,\n", i);
                         //fflush(stdout);
-                        iStLen += snprintf(acStBuf + iStLen, sizeof(acStBuf) - iStLen, "\t%d,\n", i);
+                        /* 0xFFFFAAAA; 
+                         * 0xFFFF: array len
+                         * 0xAAAA: type (not msg type, just type int, etc.)
+                         * */
+                        i = (i & 0xFFFF) | ((iArrayLen & 0xFFFF) << 16);
+                        iStLen += snprintf(acStBuf + iStLen, sizeof(acStBuf) - iStLen, "\t0x%x,\n", (unsigned int)i);
                     }
                     continue;
                 }
