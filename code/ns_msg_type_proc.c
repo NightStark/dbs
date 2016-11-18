@@ -48,6 +48,8 @@ ULONG read_MsgType(VOID)
     FILE *dotHfp = NULL;
     CHAR acBufLine[NS_MSG_TYPE_LINE_LEN + 1];
     INT iBegin = 0;
+    CHAR acStBuf[128];
+    INT  iStLen = 0;
 
     dotHfp = fopen("include/lib/ns_msg_type.h", "r");
     if (dotHfp == NULL) {
@@ -67,27 +69,31 @@ ULONG read_MsgType(VOID)
         pcPos = strstr(acBufLine, "typedef");
         if (pcPos != NULL) {
             //pcPos += strlen("typedef");
-            printf("//%s", pcPos);
-            fflush(stdout);
+            //printf("//%s", pcPos);
+            //fflush(stdout);
             continue;
         }
         pcPos = strstr(acBufLine, "{");
         if (pcPos != NULL) {
             iBegin = 1;
-            printf("%s \n\t{\n", acBufLine);
-            fflush(stdout);
+            //printf("%s \n\t{\n", acBufLine);
+            //fflush(stdout);
             continue;
         }
         pcPos = strstr(acBufLine, "}MSG_");
         if (pcPos != NULL) {
             //pcPos += strlen("typedef");
-            pcPos[0] = ' ';
-            printf("\t},\n");
+            printf("\t%s\n", "0xdeadbaef,");
+            pcPos[0] = '\t';
+            //printf("\t},\n");
             pcPos = strstr(acBufLine, "_ST;");
             if (pcPos != NULL) {
                 pcPos[0] = '\0';
-                printf("\t%s,\n},\n", acBufLine);
+                //printf("\t%s,\n},\n", acBufLine);
+                printf("%s,\n", acBufLine);
                 fflush(stdout);
+                printf("%s", acStBuf);
+                iStLen = 0;
                 continue;
             }
         }
@@ -100,6 +106,10 @@ ULONG read_MsgType(VOID)
                     //printf("%s ,", pcPos);
                     INT i = 0;
                     pcPos = NULL;
+                    pcPos++;
+                    /* is a array */
+                    if (strstr(pcPos, "[")) {
+                    }
                     while(i < ARRAY_SIZE(types_str_list)) {
                         pcPos = strstr(acBufLine, types_str_list[i]);
                         if (pcPos != NULL) {
@@ -108,8 +118,9 @@ ULONG read_MsgType(VOID)
                         i++;
                     }
                     if (pcPos != NULL) {
-                        printf("\t\t%d,\n", i);
-                        fflush(stdout);
+                        //printf("\t\t%d,\n", i);
+                        //fflush(stdout);
+                        iStLen += snprintf(acStBuf + iStLen, sizeof(acStBuf) - iStLen, "\t%d,\n", i);
                     }
                     continue;
                 }

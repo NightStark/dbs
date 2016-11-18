@@ -11,7 +11,7 @@
 #include <ns_msg.h>
 #include <ns_sm.h>
 
-NS_MSG_DATA_ENCODE_TLV(MSG_MNG_JOIN_RESP)
+NS_MSG_DATA_ENCODE_TLV(MSG_MNG_JOIN_REQ)
 {
     UINT uiOffset = 0;
     MSG_MNG_JOIN_REQ_ST *pstJoinReq = NULL;
@@ -28,7 +28,7 @@ NS_MSG_DATA_ENCODE_TLV(MSG_MNG_JOIN_RESP)
     return uiOffset;
 }
 
-NS_MSG_DATA_DECODE_TLV(MSG_MNG_JOIN_RESP)
+NS_MSG_DATA_DECODE_TLV(MSG_MNG_JOIN_REQ)
 {
     UINT uiOffset = 0;
     MSG_MNG_JOIN_REQ_ST *pstJoinReq = NULL;
@@ -45,7 +45,7 @@ NS_MSG_DATA_DECODE_TLV(MSG_MNG_JOIN_RESP)
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_encode_TLV_JoinResp(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+NS_MSG_DATA_ENCODE_TLV(MSG_MNG_JOIN_RESP)
 {
     UINT uiOffset = 0;
     MSG_MNG_JOIN_RESP_ST *pstJoinResp = NULL;
@@ -61,7 +61,7 @@ STATIC UINT MSG_DATA_encode_TLV_JoinResp(IN VOID *pStruct,   OUT VOID *pDataFlow
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_decode_TLV_JoinResp(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+NS_MSG_DATA_DECODE_TLV(MSG_MNG_JOIN_RESP)
 {
     UINT uiOffset = 0;
     MSG_MNG_JOIN_RESP_ST *pstJoinResp = NULL;
@@ -77,7 +77,7 @@ STATIC UINT MSG_DATA_decode_TLV_JoinResp(IN VOID *pDataFlow, IN UINT uiDataFlowL
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_encode_TLV_Confirm(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+NS_MSG_DATA_ENCODE_TLV(MSG_MNG_CONFIRM)
 {
     UINT uiOffset = 0;
     MSG_MNG_CONFIRM_ST *pstStruct = NULL;
@@ -92,7 +92,7 @@ STATIC UINT MSG_DATA_encode_TLV_Confirm(IN VOID *pStruct,   OUT VOID *pDataFlow,
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_decode_TLV_Confirm(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+NS_MSG_DATA_DECODE_TLV(MSG_MNG_CONFIRM)
 {
     UINT uiOffset = 0;
     MSG_MNG_CONFIRM_ST *pstStruct = NULL;
@@ -107,7 +107,7 @@ STATIC UINT MSG_DATA_decode_TLV_Confirm(IN VOID *pDataFlow, IN UINT uiDataFlowLe
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_encode_TLV_OK(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+NS_MSG_DATA_ENCODE_TLV(MSG_MNG_OK)
 {
     UINT uiOffset = 0;
     MSG_MNG_OK_ST *pstStruct = NULL;
@@ -122,7 +122,7 @@ STATIC UINT MSG_DATA_encode_TLV_OK(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_decode_TLV_OK(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+NS_MSG_DATA_DECODE_TLV(MSG_MNG_OK)
 {
     UINT uiOffset = 0;
     MSG_MNG_OK_ST *pstStruct = NULL;
@@ -137,7 +137,7 @@ STATIC UINT MSG_DATA_decode_TLV_OK(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OU
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_encode_CTL_ATTACH(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+NS_MSG_DATA_ENCODE_TLV(MSG_CTL_ATTACH)
 {
     UINT uiOffset = 0;
     MSG_CTL_ATTACH_ST *pstStruct = NULL;
@@ -154,7 +154,7 @@ STATIC UINT MSG_DATA_encode_CTL_ATTACH(IN VOID *pStruct,   OUT VOID *pDataFlow, 
     return uiOffset;
 }
 
-STATIC UINT MSG_DATA_decode_CTL_ATTACH(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+NS_MSG_DATA_DECODE_TLV(MSG_CTL_ATTACH)
 {
     UINT uiOffset = 0;
     MSG_CTL_ATTACH_ST *pstStruct = NULL;
@@ -171,34 +171,51 @@ STATIC UINT MSG_DATA_decode_CTL_ATTACH(IN VOID *pDataFlow, IN UINT uiDataFlowLen
     return uiOffset;
 }
 
+
+typedef struct tag_msg_type_desc
+{
+    INT type_type[128];
+    INT iMsgType;
+}MSG_TYPE_DESC_ST;
+
+STATIC INT g_aiTypeDescList[] = 
+{
+#include <ns_msg_type_desc.h>
+};
+
+typedef struct tag_typeDescList
+{
+    INT *piTypeDescList;
+    INT  aiTypeDescMap[_MSG_SUB_MAX_];
+}TYPE_DESC_LIST_ST;
+
+STATIC TYPE_DESC_LIST_ST g_stMsgTypeDescList;
+
 ULONG MSG_desc_reg(VOID)
 {
     MSG_Desc_Init();
 
-/*
-    MSG_Desc_Register(MSG_MNG_JOIN_REQ, 
-            sizeof(MSG_MNG_JOIN_REQ_ST), 
-            MSG_DATA_encode_TLV_JoinReq, 
-            MSG_DATA_decode_TLV_JoinReq); 
-            */
-    MSG_Desc_Register(MSG_MNG_JOIN_RESP, 
-            sizeof(MSG_MNG_JOIN_RESP_ST), 
-            MSG_DATA_encode_TLV_JoinResp, 
-            MSG_DATA_decode_TLV_JoinResp); 
-    MSG_Desc_Register(MSG_MNG_CONFIRM, 
-            sizeof(MSG_MNG_CONFIRM_ST), 
-            MSG_DATA_encode_TLV_Confirm, 
-            MSG_DATA_decode_TLV_Confirm); 
-    MSG_Desc_Register(MSG_MNG_OK, 
-            sizeof(MSG_MNG_OK_ST), 
-            MSG_DATA_encode_TLV_OK, 
-            MSG_DATA_decode_TLV_OK); 
-    MSG_Desc_Register(MSG_CTL_ATTACH, 
-            sizeof(MSG_CTL_ATTACH_ST), 
-            MSG_DATA_encode_CTL_ATTACH, 
-            MSG_DATA_decode_CTL_ATTACH); 
+    NS_MSG_DESC_REG(MSG_MNG_JOIN_REQ);
+    NS_MSG_DESC_REG(MSG_MNG_JOIN_RESP);
+    NS_MSG_DESC_REG(MSG_MNG_CONFIRM);
+    NS_MSG_DESC_REG(MSG_MNG_OK);
+    NS_MSG_DESC_REG(MSG_CTL_ATTACH);
 
-            NS_MSG_DESC_REG(MSG_MNG_JOIN_RESP);
+    memset(&g_stMsgTypeDescList, 0, sizeof(TYPE_DESC_LIST_ST));
+
+    int i = 0;
+    for (i = 0; i < ARRAY_SIZE(g_aiTypeDescList); i++) {
+        if (g_aiTypeDescList[i] == 0xdeadbaef) {
+            i++;
+            if (i < ARRAY_SIZE(g_aiTypeDescList)) {
+                g_stMsgTypeDescList.aiTypeDescMap[g_aiTypeDescList[i]] = i; 
+            }
+        }
+        printf("type=%d\n", g_aiTypeDescList[i]);
+    }
+    for (i = 0; i < ARRAY_SIZE(g_stMsgTypeDescList.aiTypeDescMap); i++) {
+        printf("msg type map index =%d\n", g_stMsgTypeDescList.aiTypeDescMap[i]);
+    }
 
     return ERROR_SUCCESS;
 }
