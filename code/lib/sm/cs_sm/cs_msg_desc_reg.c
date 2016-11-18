@@ -185,7 +185,7 @@ ULONG MSG_desc_reg(VOID)
             sizeof(MSG_MNG_JOIN_RESP_ST), 
             MSG_DATA_encode_TLV_JoinResp, 
             MSG_DATA_decode_TLV_JoinResp); 
-    MSG_Desc_Register(MSG_MNG_CONFIM, 
+    MSG_Desc_Register(MSG_MNG_CONFIRM, 
             sizeof(MSG_MNG_CONFIRM_ST), 
             MSG_DATA_encode_TLV_Confirm, 
             MSG_DATA_decode_TLV_Confirm); 

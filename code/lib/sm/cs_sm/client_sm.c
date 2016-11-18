@@ -149,7 +149,7 @@ STATIC INT CLT_SM_EVT_FUNC_WaitJResp_hd_JResp(IN CLT_SM_ST *pstCltSM, IN CLT_SM_
                 iSockFd,
                 pstCltLink->ulSessionID);
 
-    pstMsg = MSG_Create(MSG_MT_MNG, MSG_MNG_CONFIM);
+    pstMsg = MSG_Create(MSG_MT_MNG, MSG_MNG_CONFIRM);
     if (NULL == pstMsg) {
         ERR_PRINTF("create msg failed");
         ulRet = ERROR_FAILE;
@@ -158,7 +158,7 @@ STATIC INT CLT_SM_EVT_FUNC_WaitJResp_hd_JResp(IN CLT_SM_ST *pstCltSM, IN CLT_SM_
     memset(&stConfirm, 0, sizeof(stConfirm));
     stConfirm.uiConfirmID = 0xAA56;
 
-    MSG_AddData(pstMsg, MSG_MNG_CONFIM, &stConfirm, sizeof(stConfirm));
+    MSG_AddData(pstMsg, MSG_MNG_CONFIRM, &stConfirm, sizeof(stConfirm));
 
     NS_MSG_MsgList2MsgBuf(pstMsg, ucMsgBuf, &uiLen);
     MSG_PRINTF("msg len = %d", uiLen);

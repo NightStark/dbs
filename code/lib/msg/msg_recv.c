@@ -82,7 +82,7 @@ STATIC ULONG MSG_RECV_HandleMngMsg(IN INT iConnFd, IN NS_MSG_ST *pstMsg)
         case MSG_MNG_JOIN_REQ:
             enSrvSMEvt = SRV_SM_EVT_RECV_JOIN;
             break;
-        case MSG_MNG_CONFIM:
+        case MSG_MNG_CONFIRM:
             enSrvSMEvt = SRV_SM_EVT_RECV_CONFIRM;
             break;
         default:

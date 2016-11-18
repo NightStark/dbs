@@ -1,15 +1,6 @@
 #ifndef __NS_MSG_TYPE_H__
 #define __NS_MSG_TYPE_H__
 
-typedef enum tag_Msg_msg_type 
-{
-	MSG_MSG_TYPE_START = _MSG_SUB_MAX_,
-
-	MSG_MSG_TYPE_CLIENT_DEV_INFO,
-
-	_MSG_MSG_TYPE_MAX_,
-}MSG_MSG_TYPE_EN;
-
 typedef struct tag_msg_mng_join_req
 {
     UINT uiClientID;

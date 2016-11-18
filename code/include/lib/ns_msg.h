@@ -249,7 +249,7 @@ typedef enum tag_Msg_sub_type_list
     MSG_MNG_START,
     MSG_MNG_JOIN_REQ,
     MSG_MNG_JOIN_RESP,
-    MSG_MNG_CONFIM,
+    MSG_MNG_CONFIRM,
     MSG_MNG_OK,
     MSG_MNG_END,
     MSG_CTL_START = MSG_MNG_END + 1,
