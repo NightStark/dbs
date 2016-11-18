@@ -64,6 +64,8 @@ TARGET += $(TARGET_DEBUG_MAIN)
 TARGET += $(TARGET_CTEST)
 TARGET += $(TARGET_APPS)
 
+NS_PRE_PROC=pre_proc
+
 ifeq ($(ARCH),arm) 
 	CROSS=arm-linux-
 endif
@@ -80,12 +82,14 @@ LD=$(CROSS)ld
 export CC
 export LD
 
+NS_INCLUDE_PATH=include/lib
+
 #-fpic : 位置无关码就是可以在进程的任意内存位置执行的目标码
 #CFLAGS = -Wall -lpthread -I include/lib/ -lm -lrt -ggdb -Wall 
-CFLAGS = -Wall -lpthread -I include/lib/ -lm -lrt -ggdb -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
+CFLAGS = -Wall -lpthread -I $(NS_INCLUDE_PATH) -lm -lrt -ggdb -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
 CFLAGS += -lmysqlclient -L/usr/lib64/mysql/
 #OBJ_FLAGS =  -g -lpthread -I include/lib/ -fpic -lm -Wall 
-OBJ_FLAGS =  -ggdb -lpthread -I include/lib/ -fpic -lm -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
+OBJ_FLAGS =  -ggdb -lpthread -I $(NS_INCLUDE_PATH) -fpic -lm -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
 
 DEBUG = y
 
@@ -148,13 +152,18 @@ endif
 NS_LIB_PATH     = /usr/lib/ns
 NS_LIB_PATH_CFG = /etc/ld.so.conf.d/ns-lib.conf
 #吧 OBJ_NSDB 指向的所有.obj 文件都变异到动态库 TARGET_SO_FILE  (libnsdb.so)
-$(TARGET_SO_FILE):$(OBJ_NSDB)
+$(TARGET_SO_FILE):$(NS_PRE_PROC) $(OBJ_NSDB)
 	$(CC) -shared $(OBJ_NSDB) -o $(TARGET_SO_FILE) $(CFLAGS)
 	echo $(TARGET_SO_FILE) create success ....
 	mkdir $(NS_LIB_PATH) -p
 	cp ./$(TARGET_SO_FILE) $(NS_LIB_PATH)/
 	touch  $(NS_LIB_PATH_CFG)
 	echo $(NS_LIB_PATH) > $(NS_LIB_PATH_CFG)
+
+$(NS_PRE_PROC):ns_msg_type_proc.c
+	$(CC) ns_msg_type_proc.c -o $(NS_PRE_PROC) $(CFLAGS)
+	$(PWD)/$(NS_PRE_PROC) > ns_msg_type_desc.h
+	cp -rfv ns_msg_type_desc.h $(NS_INCLUDE_PATH)
 	
 $(TARGET_NSDB_C):$(OBJ_NSDB_C)
 	$(CC)  $(OBJ_NSDB_C) -o $(TARGET_NSDB_C) $(CFLAGS)
@@ -203,6 +212,7 @@ clean:
 	rm $(TARGET) 		-rvf; 	\
 	rm $(OBJ_WEBS) 		-rvf;   \
 	rm $(OBJ_CTEST) 		-rvf;   \
+	rm $(NS_PRE_PROC) 		-rvf;   \
 	rm core.*;				\
 	find . -name "*.o"   | xargs rm -rfv;	\
 	find . -name "*.so"  | xargs rm -rfv;	\
