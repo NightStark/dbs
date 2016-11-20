@@ -178,9 +178,9 @@ STATIC ULONG _MSG_AddData (IN NS_MSG_ST *pstNsMsg, IN NS_MSG_DATA_DESC_ST *pstMs
             uiRet = pstMsgDesc->pfEncodeTLV(pstMsgDesc->pDataStruct, pstMsgDesc->pDataFlow, uiDataFlowLen); 
         } else {
             uiRet = MSG_DATA_encode_TLV_normal(pstMsgDesc->pDataStruct, 
-            pstMsgDesc->pDataFlow, 
-            uiDataFlowLen,
-            pstMsgDesc->uiDataType);
+                                               pstMsgDesc->pDataFlow, 
+                                               uiDataFlowLen, 
+                                               pstMsgDesc->uiDataType);
         }
         if (uiRet <= 0) {
             ERR_PRINTF("encode msg for msg %d failed.", pstMsgDesc->uiDataType);

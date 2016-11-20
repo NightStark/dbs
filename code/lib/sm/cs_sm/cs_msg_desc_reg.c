@@ -197,37 +197,66 @@ UINT MSG_DATA_encode_TLV_normal(IN VOID *pStruct, OUT VOID *pDataFlow, UINT uiDa
     INT  iDesc = NULL;
     UINT uiOffset = 0;
     UINT uiStOffset = 0;
+    UINT uiArrayLen = 0;
     ANY_TYPE_EN enType = 0;
 
     pST = (CHAR *)pStruct;
 
+    MSG_PRINTF("MsgType = %d", iMsgType);
     iDesc = g_stMsgTypeDescList.aiTypeDescMap[iMsgType];
-    iDesc ++;
-    enType = g_aiTypeDescList[iDesc];
-    switch (enType)
-    {
-        case AT_CHAR:
-        case AT_UCHAR:
-        case AT_SZ:
-        case AT_SHORT:
-        case AT_USHORT:
-        case AT_INT:
-            uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, *((CHAR*)(pST + uiStOffset)));
-            uiStOffset += sizeof(CHAR);
+    MSG_PRINTF("iDesc = %d", iDesc);
+    /* make sure not overrun all type list */
+    while (iDesc < ARRAY_SIZE(g_aiTypeDescList)) {
+        iDesc ++;
+
+        /* arrive next type, this type is over */
+        if (g_aiTypeDescList[iDesc] == 0xdeadbaef) {
+            MSG_PRINTF("desc over %d", iDesc);
             break;
-        case AT_UINT:
-            uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, *((UINT*)(pST + uiStOffset)));
-            uiStOffset += sizeof(UINT);
-            break;
-        case AT_LONG:
-        case AT_ULONG:
-        case AT_LLONG:
-        case AT_ULLONG:
-        case AT_FLOAT:
-        case AT_DOUBLE:
-        case AT_BOOL_T:
-        case AT_NONE:
-        defalut:;
+        }
+
+        enType = g_aiTypeDescList[iDesc] & 0xFFFF;
+        uiArrayLen = (g_aiTypeDescList[iDesc] & 0xFFFF0000) >> 16;
+        MSG_PRINTF("enType = %d", enType);
+        MSG_PRINTF("uiArrayLen = %d", uiArrayLen);
+        switch (enType)
+        {
+            case AT_CHAR:
+            case AT_UCHAR:
+                uiOffset += NS_MSG_DATA_ENCODE_DATAFLOW(pDataFlow + uiOffset, 
+                        uiDataFlowLen - uiOffset, 
+                        (UCHAR *)(pST + uiStOffset), 
+                        uiArrayLen);
+                break;
+            case AT_SZ:
+                ERR_PRINTF("not support type now.");
+            case AT_SHORT:
+            case AT_USHORT:
+                uiOffset += NS_MSG_DATA_ENCODE_USHORT(pDataFlow + uiOffset, *((USHORT*)(pST + uiStOffset)));
+                uiStOffset += sizeof(USHORT);
+                break;
+            case AT_INT:
+            case AT_UINT:
+                uiOffset += NS_MSG_DATA_ENCODE_UINT(pDataFlow + uiOffset, *((UINT*)(pST + uiStOffset)));
+                uiStOffset += sizeof(UINT);
+                break;
+            case AT_LONG:
+            case AT_ULONG:
+                uiOffset += NS_MSG_DATA_ENCODE_ULONG(pDataFlow + uiOffset, *((ULONG*)(pST + uiStOffset)));
+                uiStOffset += sizeof(ULONG);
+                break;
+            case AT_LLONG:
+            case AT_ULLONG:
+            case AT_FLOAT:
+            case AT_DOUBLE:
+            case AT_BOOL_T:
+            case AT_NONE:
+                ERR_PRINTF("not support type now.");
+                break;
+            default:
+                ERR_PRINTF("invalid type.");
+                ;
+        }
     }
 
     return uiOffset;
@@ -235,13 +264,67 @@ UINT MSG_DATA_encode_TLV_normal(IN VOID *pStruct, OUT VOID *pDataFlow, UINT uiDa
 
 UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct, INT iMsgType)
 {
+    CHAR *pST = NULL;
     INT  iDesc = NULL;
     UINT uiOffset = 0;
-    UINT uiTypeLen = 0;
+    UINT uiStOffset = 0;
+    UINT uiArrayLen = 0;
+    ANY_TYPE_EN enType = 0;
+
+    pST = (CHAR *)pStruct;
 
     iDesc = g_stMsgTypeDescList.aiTypeDescMap[iMsgType];
-    
-    //uiOffset += NS_MSG_DATA_DECODE_UINT(pDataFlow + uiOffset, pstStruct + );
+    /* make sure not overrun all type list */
+    while (iDesc < ARRAY_SIZE(g_aiTypeDescList)) {
+        iDesc ++;
+
+        /* arrive next type, this type is over */
+        if (g_aiTypeDescList[iDesc] == 0xdeadbaef) {
+            break;
+        }
+
+        enType = g_aiTypeDescList[iDesc] & 0xFFFF;
+        uiArrayLen = (g_aiTypeDescList[iDesc] & 0xFFFF0000) >> 16;
+        switch (enType)
+        {
+            case AT_CHAR:
+            case AT_UCHAR:
+                uiOffset += NS_MSG_DATA_DECODE_DATAFLOW((UCHAR *)(pST + uiStOffset), 
+                        uiArrayLen,
+                        (UCHAR *)(pDataFlow + uiOffset), 
+                        uiDataFlowLen - uiOffset);
+                break;
+            case AT_SZ:
+                ERR_PRINTF("not support type now.");
+            case AT_SHORT:
+            case AT_USHORT:
+                uiOffset += NS_MSG_DATA_DECODE_USHORT(pDataFlow + uiOffset, (USHORT*)(pST + uiStOffset));
+                uiStOffset += sizeof(USHORT);
+                break;
+            case AT_INT:
+            case AT_UINT:
+                uiOffset += NS_MSG_DATA_DECODE_UINT(pDataFlow + uiOffset, (UINT *)(pST + uiStOffset));
+                uiStOffset += sizeof(UINT);
+                break;
+            case AT_LONG:
+            case AT_ULONG:
+                uiOffset += NS_MSG_DATA_DECODE_ULONG(pDataFlow + uiOffset, (ULONG*)(pST + uiStOffset));
+                uiStOffset += sizeof(ULONG);
+                break;
+            case AT_LLONG:
+            case AT_ULLONG:
+            case AT_FLOAT:
+            case AT_DOUBLE:
+            case AT_BOOL_T:
+            case AT_NONE:
+                ERR_PRINTF("not support type now.");
+                break;
+            default:
+                ERR_PRINTF("invalid type.");
+        }
+    }
+
+    return uiOffset;
 }
 
 ULONG MSG_desc_reg(VOID)

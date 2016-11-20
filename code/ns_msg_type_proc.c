@@ -144,6 +144,7 @@ ULONG read_MsgType(VOID)
         printf("%s", acBufLine);
         fflush(stdout);
     }
+    printf("\t%s\n", "0xdeadbaef,");
 
     fclose(dotHfp);
     dotHfp = NULL;

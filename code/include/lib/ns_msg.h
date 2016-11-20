@@ -378,15 +378,22 @@ INT CLIENT_MSG_recv(MSG_CLT_LINK_ST *pstCltLink, VOID *pRecvBuf, INT iBufLen);
 INT SERVER_MSG_send(IN MSG_SRV_LINK_ST *pstSrvLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
 INT CLIENT_MSG_send(IN MSG_CLT_LINK_ST *pstCltLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
 
+#if 0
 #define NS_MSG_DESC_REG(stype) \
     MSG_Desc_Register(stype, \
             sizeof(stype##_ST), \
             MSG_DATA_encode_TLV_##stype,  \
             MSG_DATA_decode_TLV_##stype)
+#endif
+#define NS_MSG_DESC_REG(stype) \
+    MSG_Desc_Register(stype, \
+            sizeof(stype##_ST), \
+            NULL,  \
+            NULL)
 
 #define NS_MSG_DATA_ENCODE_TLV(stype) \
-    STATIC UINT MSG_DATA_encode_TLV_##stype(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+    /* STATIC */ UINT MSG_DATA_encode_TLV_##stype(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
 #define NS_MSG_DATA_DECODE_TLV(stype) \
-    STATIC UINT MSG_DATA_decode_TLV_##stype(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+    /* STATIC */ UINT MSG_DATA_decode_TLV_##stype(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
 
 #endif //__MSG_H__
