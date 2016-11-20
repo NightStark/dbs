@@ -117,14 +117,22 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
         return ERROR_FAILE;
     }
 
+    MSG_PRINTF("------------------------");
     pstTask = malloc(sizeof(NS_TASK_INFO));
     if (pstTask == NULL) {
         ERR_PRINTF("oom.");
         return ERROR_FAILE;
     }
 
+    MSG_PRINTF("------------------------");
     pstTask->pfTask    = pfTask;
-    pstTask->ulArgs[0] = (ULONG)pArgs; //now, only use [0]
+    pstTask->ulArgs[0] = (ULONG)pArgs;
+    /*
+    pstTask->ulArgs[1] = (ULONG)(pArgs + 1);
+    pstTask->ulArgs[2] = (ULONG)(pArgs + 2);
+    pstTask->ulArgs[3] = (ULONG)(pArgs + 3);
+    */
+    MSG_PRINTF("------------------------");
     pstTask->uiTaskId  = AllocID(g_ulTaskIDPollFd, 1);
     DBGASSERT(pstTask->uiTaskId >= 0); 
 
@@ -132,6 +140,7 @@ ULONG Server_Task_Create(pfTaskFunc pfTask, VOID *pArgs)
     DCL_AddTail(&g_stTaskPendHead, &(pstTask->stNodeTask));
     NS_TASK_UNLOCK;
 
+    MSG_PRINTF("------------------------");
     /* wake up dispatch thread, maybe he iw wait */
     pthread_mutex_lock(&g_ThrdTaskWait_mutex);	 //需要操作临界资源，先加锁，	
     pthread_cond_signal(&g_ThrdTaskWait_cond); 
@@ -195,7 +204,7 @@ STATIC ULONG _Server_do_TaskDispatch(VOID)
         //TEST
         //pstTask->pfTask(pstTask);
 
-        //TODO: 需要一个调度算法。
+        //TODO: 需要一个调度算法。 , client need a WORK thread too. and not start a work, without this thread
         pstWorkThrd = Thread_server_GetByThreadType(THREAD_TYPE_WORK_SERVER);
         DBGASSERT(NULL != pstWorkThrd);
 

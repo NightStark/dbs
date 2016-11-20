@@ -46,7 +46,7 @@ STATIC ULONG MSG_server_ctl_recv_attachReap (MSG_SRV_LINK_ST *pstSrvLink, VOID *
         }
 
         memset(&stCtlUpgrade, 0, sizeof(stCtlUpgrade));
-        stCtlUpgrade.uiCmd = 1;
+        stCtlUpgrade.uiCmd = MSG_CTL_UPGRADE_CMD_DO_UPGTADE,
         snprintf((CHAR *)stCtlUpgrade.ucFwUrl, sizeof(stCtlUpgrade.ucFwUrl), "%s", 
                 "http://o8m6kmvvz.bkt.clouddn.com/AP106P06V1.5.11Build9951_TU");
 

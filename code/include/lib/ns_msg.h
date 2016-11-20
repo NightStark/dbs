@@ -271,6 +271,14 @@ typedef enum tag_Msg_Attach_resp_status_code
     MSG_ATTACH_RESP_STATUS_NEED_MAX,
 }MSG_ATTACH_RESP_STATUS_EN;
 
+typedef enum tag_Msg_ctl_upgrade_cmd
+{
+    MSG_CTL_UPGRADE_CMD_NONE = 0,
+    MSG_CTL_UPGRADE_CMD_DO_UPGTADE,
+
+    MSG_CTL_UPGRADE_CMD_MAX,
+}MSG_CTL_UPGRADE_CMD_EN;
+
 /* type in msg list 注意区别 MSG_SUB_TYPE_EN中的MSG_DAT_xxx 
  * 此处为消息结构类型，相当于sub-sub，三级类型。
  * */

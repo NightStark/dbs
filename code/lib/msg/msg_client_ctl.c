@@ -19,6 +19,7 @@
 #include <ns_server.h>
 #include <ns_msg_client_link.h>
 #include <ns_config.h>
+#include <ns_task.h>
 
 ULONG MSG_clinet_ctl_recv_attach (MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
 {
@@ -79,6 +80,24 @@ ULONG MSG_clinet_ctl_recv_attach (MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
     return ERROR_SUCCESS;
 }
 
+STATIC ULONG _donwload_and_upgraed_TaskFunc(VOID *args /* ==> (NS_TASK_INFO *) */) {
+    NS_TASK_INFO       *pstTask       = NULL;
+    MSG_SRV_LINK_ST    *pstSrvLink    = NULL;
+    MSG_CTL_UPGRADE_ST *pstCtlUpgrade = NULL;
+    CHAR *pcBuf = NULL;
+
+    DBGASSERT(args != NULL);
+
+    pstTask = (NS_TASK_INFO *)args;
+    pcBuf = (MSG_SRV_LINK_ST *)pstTask->ulArgs[0];
+    //pstCtlUpgrade = (MSG_SRV_LINK_ST *)pstTask->ulArgs[1];
+
+    ERR_PRINTF("url=%s", pcBuf);
+
+   //return MSG_server_ctl_send_attach(pstSrvLink); 
+   return ERROR_SUCCESS;
+}
+
 ULONG MSG_clinet_ctl_recv_Upgrade(MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
 {
     INT   iSockFd       = -1;
@@ -90,6 +109,8 @@ ULONG MSG_clinet_ctl_recv_Upgrade(MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
     MSG_CTL_ATTACH_RESP_ST stCtlAttachResp;
     UCHAR ucMsgBuf[1024]  = {0};
     NS_MSG_ST *pstRespMsg = NULL;
+    ULONG ulArgs[4];
+    CHAR *pcBuf = NULL;
 
     DBGASSERT(NULL != pMsg);
 
@@ -100,6 +121,29 @@ ULONG MSG_clinet_ctl_recv_Upgrade(MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
         ERR_PRINTF("Get sub type[%d] failed.", pstMsg->usSubType);
     }
 
-    MSG_PRINTF("FW URL:%s", stCtlUpgrade.ucFwUrl);
+    if (stCtlUpgrade.uiCmd == MSG_CTL_UPGRADE_CMD_DO_UPGTADE) {
+        MSG_PRINTF("do upgrade, FW URL:%s", stCtlUpgrade.ucFwUrl);
+    }
 
+    MSG_PRINTF("------------------------");
+    /* start a donwload task */
+    ulArgs[0] = (ULONG)pstCltLink;
+    pcBuf = malloc(strlen((CHAR *)stCtlUpgrade.ucFwUrl) + 1);
+    if (NULL  == pcBuf) {
+        ERR_PRINTF("oom.");
+        return ERROR_FAILE;
+    }
+    MSG_PRINTF("------------------------");
+
+    snprintf(pcBuf, strlen((CHAR *)stCtlUpgrade.ucFwUrl) + 1, "%s", stCtlUpgrade.ucFwUrl);
+    //ulArgs[1] = (ULONG)pcBuf;
+    MSG_PRINTF("------------------------");
+
+    ulRet = Server_Task_Create(_donwload_and_upgraed_TaskFunc, pcBuf);
+    if (ulRet != ERROR_SUCCESS) {
+        ERR_PRINTF("create tesk failed.");
+    }
+    MSG_PRINTF("------------------------");
+
+    return ERROR_FAILE;
 }
