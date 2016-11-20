@@ -255,6 +255,7 @@ typedef enum tag_Msg_sub_type_list
     MSG_CTL_START = MSG_MNG_END + 1,
     MSG_CTL_ATTACH,
     MSG_CTL_ATTACH_RESP,
+    MSG_CTL_UPGRADE,
     MSG_CTL_END,
     MSG_DAT_START = MSG_CTL_END + 1,
     MSG_DAT_END,

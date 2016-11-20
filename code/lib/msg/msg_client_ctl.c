@@ -78,3 +78,28 @@ ULONG MSG_clinet_ctl_recv_attach (MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
 
     return ERROR_SUCCESS;
 }
+
+ULONG MSG_clinet_ctl_recv_Upgrade(MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
+{
+    INT   iSockFd       = -1;
+    UINT  uiClientFwVer = 0;
+    ULONG ulRet         = ERROR_FAILE;
+    UINT  uiLen         = 0;
+    NS_MSG_ST *pstMsg   = NULL;
+    MSG_CTL_UPGRADE_ST stCtlUpgrade;
+    MSG_CTL_ATTACH_RESP_ST stCtlAttachResp;
+    UCHAR ucMsgBuf[1024]  = {0};
+    NS_MSG_ST *pstRespMsg = NULL;
+
+    DBGASSERT(NULL != pMsg);
+
+    pstMsg = (NS_MSG_ST *)pMsg;
+
+    ulRet = MSG_GetData(pstMsg, pstMsg->usSubType, &stCtlUpgrade, sizeof(stCtlUpgrade));
+    if (ulRet != ERROR_SUCCESS) {
+        ERR_PRINTF("Get sub type[%d] failed.", pstMsg->usSubType);
+    }
+
+    MSG_PRINTF("FW URL:%s", stCtlUpgrade.ucFwUrl);
+
+}

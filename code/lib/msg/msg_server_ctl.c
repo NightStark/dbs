@@ -16,21 +16,52 @@ STATIC ULONG MSG_server_ctl_recv_attachReap (MSG_SRV_LINK_ST *pstSrvLink, VOID *
 {
     INT   iSockFd       = -1;
     ULONG ulRet         = ERROR_FAILE;
+    UINT  uiLen         = 0;
     NS_MSG_ST *pstMsg   = NULL;
     MSG_CTL_ATTACH_RESP_ST stCtlAttachResp;
+    MSG_CTL_UPGRADE_ST stCtlUpgrade;
     UCHAR ucMsgBuf[1024]  = {0};
     NS_MSG_ST *pstRespMsg = NULL;
 
     DBGASSERT(NULL != pMsg);
 
     pstMsg = (NS_MSG_ST *)pMsg;
-    //if ()
+
     ulRet = MSG_GetData(pstMsg, pstMsg->usSubType, &stCtlAttachResp, sizeof(stCtlAttachResp));
     if (ulRet != ERROR_SUCCESS) {
         ERR_PRINTF("Get sub type[%d] failed.", pstMsg->usSubType);
     }
 
     MSG_PRINTF("Attach resp status = %d", stCtlAttachResp.uiAttachStatus);
+    if (stCtlAttachResp.uiAttachStatus == MSG_ATTACH_RESP_STATUS_NEED_UPGRAED) {
+        iSockFd = pstSrvLink->iSockFd;
+        if (iSockFd == -1) {
+            ERR_PRINTF("invalid socket fd");
+            return ERROR_FAILE;
+        }
+        pstRespMsg = MSG_Create(MSG_MT_CTL, MSG_CTL_UPGRADE);
+        if (NULL == pstRespMsg) {
+            ERR_PRINTF("create msg failed");
+            ulRet = ERROR_FAILE;
+        }
+
+        memset(&stCtlUpgrade, 0, sizeof(stCtlUpgrade));
+        stCtlUpgrade.uiCmd = 1;
+        snprintf((CHAR *)stCtlUpgrade.ucFwUrl, sizeof(stCtlUpgrade.ucFwUrl), "%s", 
+                "http://o8m6kmvvz.bkt.clouddn.com/AP106P06V1.5.11Build9951_TU");
+
+        MSG_AddData(pstRespMsg, MSG_CTL_UPGRADE, &stCtlUpgrade, sizeof(stCtlUpgrade));
+
+        uiLen = sizeof(ucMsgBuf);
+        NS_MSG_MsgList2MsgBuf(pstRespMsg, ucMsgBuf, &uiLen);
+        MSG_PRINTF("msg len = %d", uiLen);
+
+        //send data
+        ulRet = SERVER_MSG_send(pstSrvLink, ucMsgBuf, uiLen);
+
+        MSG_Destroy(pstRespMsg);
+        pstRespMsg = NULL;
+    }
 
     return ERROR_SUCCESS;
 }

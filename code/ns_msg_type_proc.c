@@ -117,6 +117,8 @@ ULONG read_MsgType(VOID)
                             pcEnd = '\0';
                             iArrayLen = atoi(pcPos);
                         }
+                    } else {
+                        iArrayLen = 1;
                     }
                     pcPos = NULL;
                     while(i < ARRAY_SIZE(types_str_list)) {

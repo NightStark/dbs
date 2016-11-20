@@ -234,7 +234,7 @@ ULONG MSG_AddData (IN NS_MSG_ST *pstMsg,
 
     pstMsgDD = MSG_Desc_Get(uiMsgType);
     if (pstMsgDD == NULL) {
-        ERR_PRINTF("invalid msg type[%d]", uiMsgType);
+        ERR_PRINTF("invalid msg type[%d], maybe this TYPE is not reg in:MSG_desc_reg", uiMsgType);
         return ERROR_FAILE;
     }
 

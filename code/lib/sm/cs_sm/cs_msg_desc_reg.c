@@ -289,10 +289,11 @@ UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT V
         {
             case AT_CHAR:
             case AT_UCHAR:
+                //ERR_PRINTF("uiDataLen:%d uiBufLen:%d", uiArrayLen, uiDataFlowLen - uiOffset);
                 uiOffset += NS_MSG_DATA_DECODE_DATAFLOW((UCHAR *)(pST + uiStOffset), 
                         uiArrayLen,
                         (UCHAR *)(pDataFlow + uiOffset), 
-                        uiDataFlowLen - uiOffset);
+                        uiArrayLen);
                 break;
             case AT_SZ:
                 ERR_PRINTF("not support type now.");
@@ -327,33 +328,78 @@ UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT V
     return uiOffset;
 }
 
+STATIC UINT g_uiTypeLenList [] = {
+	[AT_NONE]   = 0,
+	[AT_CHAR]   = sizeof(CHAR),
+	[AT_UCHAR]  = sizeof(UCHAR),
+	[AT_SZ]     = 0,
+	[AT_SHORT]  = sizeof(SHORT),
+	[AT_USHORT] = sizeof(USHORT),
+	[AT_INT]    = sizeof(INT),
+	[AT_UINT]   = sizeof(UINT),
+	[AT_LONG]   = sizeof(LONG),
+	[AT_ULONG]  = sizeof(ULONG),
+	[AT_LLONG]  = sizeof(LLONG),
+	[AT_ULLONG] = sizeof(ULLONG),
+	[AT_FLOAT]  = sizeof(FLOAT),
+	[AT_DOUBLE] = sizeof(DOUBLE),
+	[AT_BOOL_T] = sizeof(BOOL_T),
+};
+
 ULONG MSG_desc_reg(VOID)
 {
-    int i = 0;
+    INT i = 0;
+    INT iStLen = 0;
+    UINT uiType = 0;
+    UINT uiArrayLen = 0;
+    UINT uiPreIndex = 0;
+
     MSG_Desc_Init();
 
+/* //do this in below loop
     NS_MSG_DESC_REG(MSG_MNG_JOIN_REQ);
     NS_MSG_DESC_REG(MSG_MNG_JOIN_RESP);
     NS_MSG_DESC_REG(MSG_MNG_CONFIRM);
     NS_MSG_DESC_REG(MSG_MNG_OK);
     NS_MSG_DESC_REG(MSG_CTL_ATTACH);
     NS_MSG_DESC_REG(MSG_CTL_ATTACH_RESP);
+    NS_MSG_DESC_REG(MSG_CTL_UPGRADE);
+    */
 
     memset(&g_stMsgTypeDescList, 0, sizeof(TYPE_DESC_LIST_ST));
 
     /* map list type */
     for (i = 0; i < ARRAY_SIZE(g_aiTypeDescList); i++) {
         if (g_aiTypeDescList[i] == 0xdeadbaef) {
+            if (i != 0) {
+                MSG_PRINTF("do MSG_Desc_Register, msg type = %d,st len = %d", uiPreIndex, iStLen);
+                MSG_Desc_Register(uiPreIndex, iStLen, NULL, NULL);
+            }
             i++;
             if (i < ARRAY_SIZE(g_aiTypeDescList)) {
-                g_stMsgTypeDescList.aiTypeDescMap[g_aiTypeDescList[i]] = i; 
+                /* save msg type index in TypeDescMap, for fast data-type find. */
+                g_stMsgTypeDescList.aiTypeDescMap[g_aiTypeDescList[i]] = i; /* this map's index, is in MSG MSG_SUB_TYPE_EN */
+                uiPreIndex = g_aiTypeDescList[i]; /* save a msg type index */
+                MSG_PRINTF("msg type=%d", g_aiTypeDescList[i]);
             }
+            iStLen = 0;
+            continue;
         }
-        MSG_PRINTF("type=%d\n", g_aiTypeDescList[i]);
+        MSG_PRINTF("type type=0x%x", (unsigned int)g_aiTypeDescList[i]);
+        
+        uiType = g_aiTypeDescList[i] & 0xFFFF;
+        uiArrayLen = g_aiTypeDescList[i] >> 16;
+        MSG_PRINTF("uiType:%d TLEN:%d * uiArrayLen:%d", uiType, g_uiTypeLenList[uiType], uiArrayLen);
+        if (uiType > ARRAY_SIZE(g_uiTypeLenList)) {
+            ERR_PRINTF("bad type");
+            return ERROR_FAILE;
+        }
+
+        iStLen += (g_uiTypeLenList[uiType] * uiArrayLen);
     }
 
     for (i = 0; i < ARRAY_SIZE(g_stMsgTypeDescList.aiTypeDescMap); i++) {
-        MSG_PRINTF("msg type map index =%d\n", g_stMsgTypeDescList.aiTypeDescMap[i]);
+        MSG_PRINTF("msg type map index =%d", g_stMsgTypeDescList.aiTypeDescMap[i]);
     }
 
     return ERROR_SUCCESS;

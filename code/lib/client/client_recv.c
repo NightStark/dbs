@@ -85,6 +85,10 @@ STATIC ULONG MSG_Client_RECV_HandleCtlMsg(IN INT iConnFd, IN NS_MSG_ST *pstMsg)
             MSG_PRINTF("get ATTACH.");
             MSG_clinet_ctl_recv_attach(pstMsgCltLink, pstMsg);
             break;
+        case MSG_CTL_UPGRADE:
+            MSG_PRINTF("get Upgrade.");
+            MSG_clinet_ctl_recv_Upgrade(pstMsgCltLink, pstMsg);
+            break;
         default:
             ERR_PRINTF("Invalid Sub msg type!");
     }
