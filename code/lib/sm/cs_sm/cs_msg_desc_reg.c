@@ -329,6 +329,7 @@ UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT V
 
 ULONG MSG_desc_reg(VOID)
 {
+    int i = 0;
     MSG_Desc_Init();
 
     NS_MSG_DESC_REG(MSG_MNG_JOIN_REQ);
@@ -336,10 +337,11 @@ ULONG MSG_desc_reg(VOID)
     NS_MSG_DESC_REG(MSG_MNG_CONFIRM);
     NS_MSG_DESC_REG(MSG_MNG_OK);
     NS_MSG_DESC_REG(MSG_CTL_ATTACH);
+    NS_MSG_DESC_REG(MSG_CTL_ATTACH_RESP);
 
     memset(&g_stMsgTypeDescList, 0, sizeof(TYPE_DESC_LIST_ST));
 
-    int i = 0;
+    /* map list type */
     for (i = 0; i < ARRAY_SIZE(g_aiTypeDescList); i++) {
         if (g_aiTypeDescList[i] == 0xdeadbaef) {
             i++;
@@ -347,10 +349,11 @@ ULONG MSG_desc_reg(VOID)
                 g_stMsgTypeDescList.aiTypeDescMap[g_aiTypeDescList[i]] = i; 
             }
         }
-        printf("type=%d\n", g_aiTypeDescList[i]);
+        MSG_PRINTF("type=%d\n", g_aiTypeDescList[i]);
     }
+
     for (i = 0; i < ARRAY_SIZE(g_stMsgTypeDescList.aiTypeDescMap); i++) {
-        printf("msg type map index =%d\n", g_stMsgTypeDescList.aiTypeDescMap[i]);
+        MSG_PRINTF("msg type map index =%d\n", g_stMsgTypeDescList.aiTypeDescMap[i]);
     }
 
     return ERROR_SUCCESS;

@@ -106,7 +106,7 @@ VOID DBG_print_ByType(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf)
         return;
     }
 
-/*
+#if 0
 	printf( "\033[0;"
 				"%sm"
 				"[%08lu]"
@@ -119,7 +119,8 @@ VOID DBG_print_ByType(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf)
 			((pstDbgPrintBuf)->pcDbgFileName),	
 			((pstDbgPrintBuf)->pcDbgFunName),	
 			((pstDbgPrintBuf)->iDbgLine));
-            */
+
+#else
 
     ns_log_mx(pstDbgPrintBuf->iModID, iLevel, 
             "\033[0;"
@@ -134,6 +135,7 @@ VOID DBG_print_ByType(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf)
             ((pstDbgPrintBuf)->pcDbgFileName),	
             ((pstDbgPrintBuf)->pcDbgFunName),	
             ((pstDbgPrintBuf)->iDbgLine));
+#endif
 
 	return;
 }

@@ -108,6 +108,7 @@ STATIC ULONG MSG_RECV_HandleMsg(IN INT iConnFd, IN UCHAR *pauRecvBuf, IN INT iMs
             ulRet = MSG_RECV_HandleMngMsg(iConnFd, pstMsg);
             break;
         case MSG_MT_CTL:
+            ulRet = MSG_RECV_HandleCtlMsg(iConnFd, pstMsg);
 
             break;
         case MSG_MT_DAT:

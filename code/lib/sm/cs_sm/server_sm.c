@@ -331,6 +331,11 @@ INT SRV_SM_EVT_HANDLE(IN SRV_SM_ST *pstSrvSM, IN SRV_SM_EVT_EN enSrvSMEvt, IN VO
     return pfSrvSMEvt(pstSrvSM, enSrvSMEvt, args);
 }
 
+SRV_SM_STATS_EN SRV_SM_STATUS_GET(SRV_SM_ST *pstSrvSM)
+{
+    return pstSrvSM->enSrvSMStats;
+}
+
 SRV_SM_ST *SRV_sm_CreateAndStart(VOID)
 {
     SRV_SM_ST *stSrvSM = NULL;

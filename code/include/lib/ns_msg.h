@@ -254,12 +254,21 @@ typedef enum tag_Msg_sub_type_list
     MSG_MNG_END,
     MSG_CTL_START = MSG_MNG_END + 1,
     MSG_CTL_ATTACH,
+    MSG_CTL_ATTACH_RESP,
     MSG_CTL_END,
     MSG_DAT_START = MSG_CTL_END + 1,
     MSG_DAT_END,
 
     _MSG_SUB_MAX_,
 }MSG_SUB_TYPE_EN;
+
+typedef enum tag_Msg_Attach_resp_status_code
+{
+    MSG_ATTACH_RESP_STATUS_SUCCESS = 0,
+    MSG_ATTACH_RESP_STATUS_NEED_UPGRAED,
+
+    MSG_ATTACH_RESP_STATUS_NEED_MAX,
+}MSG_ATTACH_RESP_STATUS_EN;
 
 /* type in msg list 注意区别 MSG_SUB_TYPE_EN中的MSG_DAT_xxx 
  * 此处为消息结构类型，相当于sub-sub，三级类型。
@@ -377,6 +386,9 @@ INT MSG_normal_recv(INT iConnFd, VOID *pRecvBuf, INT iBufLen);
 INT CLIENT_MSG_recv(MSG_CLT_LINK_ST *pstCltLink, VOID *pRecvBuf, INT iBufLen);
 INT SERVER_MSG_send(IN MSG_SRV_LINK_ST *pstSrvLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
 INT CLIENT_MSG_send(IN MSG_CLT_LINK_ST *pstCltLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
+ULONG MSG_desc_reg(VOID);
+UINT MSG_DATA_encode_TLV_normal(IN VOID *pStruct, OUT VOID *pDataFlow, UINT uiDataFlowLen, INT iMsgType);
+UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct, INT iMsgType);
 
 #if 0
 #define NS_MSG_DESC_REG(stype) \

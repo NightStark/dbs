@@ -12,5 +12,9 @@
  *      CC: NS_VER_STEP
  * */
 #define NS_SERVER_VER (((NS_VER_MAIN) << 16) || (NS_VER_SUB << 8) || (NS_VER_STEP))
+#define NS_C_VER_MAIN (0)
+#define NS_C_VER_SUB  (1)
+#define NS_C_VER_STEP (1)
+#define NS_CLIENT_VER (((NS_C_VER_MAIN) << 16) || (NS_C_VER_SUB << 8) || (NS_C_VER_STEP))
 
 #endif //__VERSION_H__

@@ -27,8 +27,14 @@ typedef struct tag_msg_mng_ok
 typedef struct tag_msg_ctl_attach
 {
     UINT uiAttachMode; /* client mode: slave, mange, server. */
+    UINT uiFwVer;
     UINT uiCmdVer; 
     UINT uiCmdID;
 }MSG_CTL_ATTACH_ST;
+
+typedef struct tag_msg_ctl_attach_resp
+{
+    UINT uiAttachStatus; /* MSG_ATTACH_RESP_STATUS_EN, 0:sucess */
+}MSG_CTL_ATTACH_RESP_ST;
 
 #endif //__NS_MSG_TYPE_H__

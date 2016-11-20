@@ -18,12 +18,19 @@
 #include <ns_sm.h>
 #include <ns_server.h>
 #include <ns_msg_client_link.h>
+#include <ns_config.h>
 
 ULONG MSG_clinet_ctl_recv_attach (MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
 {
-    NS_MSG_ST *pstMsg;
-    MSG_CTL_ATTACH_ST stCtlAttach;
-    ULONG ulRet = ERROR_FAILE;
+    INT   iSockFd       = -1;
+    UINT  uiClientFwVer = 0;
+    ULONG ulRet         = ERROR_FAILE;
+    UINT  uiLen         = 0;
+    NS_MSG_ST *pstMsg   = NULL;
+    MSG_CTL_ATTACH_ST      stCtlAttach;
+    MSG_CTL_ATTACH_RESP_ST stCtlAttachResp;
+    UCHAR ucMsgBuf[1024]  = {0};
+    NS_MSG_ST *pstRespMsg = NULL;
 
     DBGASSERT(NULL != pMsg);
 
@@ -34,7 +41,40 @@ ULONG MSG_clinet_ctl_recv_attach (MSG_CLT_LINK_ST *pstCltLink, VOID *pMsg)
         ERR_PRINTF("Get sub type[%d] failed.", pstMsg->usSubType);
     }
 
+    uiClientFwVer = cfg_get_client_fw_ver();
     MSG_PRINTF("Attach Mode = %d", stCtlAttach.uiAttachMode);
+    MSG_PRINTF("Attach FW version  = %d", stCtlAttach.uiFwVer);
+    MSG_PRINTF("now FW version  = %d", uiClientFwVer);
+    if (uiClientFwVer != stCtlAttach.uiFwVer) {
+        MSG_PRINTF("FW version  attach failed need upgrade to new");
+    }
+
+    iSockFd = pstCltLink->iSockFd;
+    if (iSockFd == -1) {
+        ERR_PRINTF("invalid socket fd");
+        return ERROR_FAILE;
+    }
+    pstRespMsg = MSG_Create(MSG_MT_CTL, MSG_CTL_ATTACH_RESP);
+    if (NULL == pstRespMsg) {
+        ERR_PRINTF("create msg failed");
+        ulRet = ERROR_FAILE;
+    }
+
+    memset(&stCtlAttachResp, 0, sizeof(stCtlAttachResp));
+    stCtlAttachResp.uiAttachStatus = MSG_ATTACH_RESP_STATUS_NEED_UPGRAED;
+
+    MSG_AddData(pstRespMsg, MSG_CTL_ATTACH_RESP, &stCtlAttachResp, sizeof(stCtlAttachResp));
+
+    uiLen = sizeof(ucMsgBuf);
+    NS_MSG_MsgList2MsgBuf(pstRespMsg, ucMsgBuf, &uiLen);
+    MSG_PRINTF("msg len = %d", uiLen);
+
+    //send data
+    ulRet = CLIENT_MSG_send(pstCltLink, ucMsgBuf, uiLen);
+
+    MSG_Destroy(pstRespMsg);
+    pstRespMsg = NULL;
+
 
     return ERROR_SUCCESS;
 }
