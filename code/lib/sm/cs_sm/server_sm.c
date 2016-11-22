@@ -10,6 +10,7 @@
 #include <ns_msg_server_link.h>
 #include <ns_msg.h>
 #include <ns_server.h>
+#include <ns_task.h>
 
 STATIC INT g_iSrvSMID = 0;
 
@@ -95,6 +96,18 @@ STATIC INT SRV_SM_EVT_Idle_hd_JonReq(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSME
     return ulRet;
 }
 
+STATIC ULONG _attach_client_TaskFunc(VOID *args /* ==> (NS_TASK_INFO *) */) {
+    NS_TASK_INFO    *pstTask    = NULL;
+    MSG_SRV_LINK_ST *pstSrvLink = NULL;
+
+    DBGASSERT(args != NULL);
+
+    pstTask = (NS_TASK_INFO *)args;
+    pstSrvLink = (MSG_SRV_LINK_ST *)pstTask->ulArgs[0];
+
+   return MSG_server_ctl_send_attach(pstSrvLink); 
+}
+
 STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSMEvt, VOID * args)
 {
     NS_MSG_ST *pstMsg;
@@ -153,6 +166,13 @@ STATIC INT SRV_SM_EVT_WaitConfirm_hd_Confirm(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN 
 
     MSG_Destroy(pstMsg);
     pstMsg = NULL;
+
+
+    //tell work thread to do some work.
+    ulRet = Server_Task_Create(_attach_client_TaskFunc, pstSrvLink);
+    if (ulRet != ERROR_SUCCESS) {
+        ERR_PRINTF("create tesk failed.");
+    }
     
     return ulRet;
 }
@@ -309,6 +329,11 @@ INT SRV_SM_EVT_HANDLE(IN SRV_SM_ST *pstSrvSM, IN SRV_SM_EVT_EN enSrvSMEvt, IN VO
     // INT SRV_SM_EVT__TEST(SRV_SM_ST *pstSrvSM, SRV_SM_EVT_EN enSrvSMEvt, VOID * args)
 
     return pfSrvSMEvt(pstSrvSM, enSrvSMEvt, args);
+}
+
+SRV_SM_STATS_EN SRV_SM_STATUS_GET(SRV_SM_ST *pstSrvSM)
+{
+    return pstSrvSM->enSrvSMStats;
 }
 
 SRV_SM_ST *SRV_sm_CreateAndStart(VOID)

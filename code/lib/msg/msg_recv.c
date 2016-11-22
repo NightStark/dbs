@@ -82,7 +82,7 @@ STATIC ULONG MSG_RECV_HandleMngMsg(IN INT iConnFd, IN NS_MSG_ST *pstMsg)
         case MSG_MNG_JOIN_REQ:
             enSrvSMEvt = SRV_SM_EVT_RECV_JOIN;
             break;
-        case MSG_MNG_CONFIM:
+        case MSG_MNG_CONFIRM:
             enSrvSMEvt = SRV_SM_EVT_RECV_CONFIRM;
             break;
         default:
@@ -108,6 +108,7 @@ STATIC ULONG MSG_RECV_HandleMsg(IN INT iConnFd, IN UCHAR *pauRecvBuf, IN INT iMs
             ulRet = MSG_RECV_HandleMngMsg(iConnFd, pstMsg);
             break;
         case MSG_MT_CTL:
+            ulRet = MSG_RECV_HandleCtlMsg(iConnFd, pstMsg);
 
             break;
         case MSG_MT_DAT:

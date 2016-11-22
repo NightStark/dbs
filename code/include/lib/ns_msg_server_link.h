@@ -34,4 +34,6 @@ typedef struct tag_MsgServerLink
     LINK_CLIENT_INFO_ST stClientInfo;
 }MSG_SRV_LINK_ST;
 
+ULONG MSG_server_ctl_send_attach(MSG_SRV_LINK_ST *pstSrvLink);
+ULONG MSG_RECV_HandleCtlMsg(IN INT iConnFd, IN VOID *pMsg);
 #endif //__NS_MSG_SRV_LINK_H__

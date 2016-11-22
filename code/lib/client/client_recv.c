@@ -55,6 +55,47 @@ STATIC ULONG MSG_Client_RECV_HandleMngMsg(IN INT iConnFd, IN NS_MSG_ST *pstMsg)
     return ulRet;
 }
 
+STATIC ULONG MSG_Client_RECV_HandleCtlMsg(IN INT iConnFd, IN NS_MSG_ST *pstMsg)
+{
+    UINT ulRet = 0;
+    CLT_SM_ST *pstCltSM = NULL;
+    MSG_CLT_LINK_ST *pstMsgCltLink = NULL;
+    CLT_SM_STATS_EN enSt;
+
+    DBGASSERT(NULL != pstMsg);  
+    
+    pstMsgCltLink = MSG_client_link_Get();
+    if (NULL == pstMsgCltLink) {
+        ERR_PRINTF("Can not find link of socked:%d", iConnFd);
+        return ERROR_FAILE;
+    }
+
+    pstCltSM = pstMsgCltLink->pstCltSm;
+
+    enSt = CLT_SM_STATUS_GET(pstCltSM); 
+    if (enSt != CLT_SM_STATS_RUN) {
+        ERR_PRINTF("CLT sm is not RUN, sockfd:%d, now status:%d", iConnFd, enSt);
+        return ERROR_FAILE;
+    }
+
+    DBGASSERT(iConnFd == pstMsgCltLink->iSockFd);
+
+    switch (pstMsg->usSubType) {
+        case MSG_CTL_ATTACH:
+            MSG_PRINTF("get ATTACH.");
+            MSG_clinet_ctl_recv_attach(pstMsgCltLink, pstMsg);
+            break;
+        case MSG_CTL_UPGRADE:
+            MSG_PRINTF("get Upgrade.");
+            MSG_clinet_ctl_recv_Upgrade(pstMsgCltLink, pstMsg);
+            break;
+        default:
+            ERR_PRINTF("Invalid Sub msg type!");
+    }
+
+    return ulRet;
+}
+
 //TODO:和server合并？
 ULONG MSG_Client_RECV_HandleMsg(IN INT iConnFd, IN UCHAR *pauRecvBuf, IN INT iMsgLen)
 {
@@ -71,7 +112,7 @@ ULONG MSG_Client_RECV_HandleMsg(IN INT iConnFd, IN UCHAR *pauRecvBuf, IN INT iMs
             ulRet = MSG_Client_RECV_HandleMngMsg(iConnFd, pstMsg);
             break;
         case MSG_MT_CTL:
-
+            ulRet = MSG_Client_RECV_HandleCtlMsg(iConnFd, pstMsg);
             break;
         case MSG_MT_DAT:
 
@@ -121,3 +162,4 @@ ULONG Client_Recv(IN INT iDataBufLen , IN VOID *pDataBuf)
 	return ulRet;
 }
 */
+

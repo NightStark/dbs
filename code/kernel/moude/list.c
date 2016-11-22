@@ -151,6 +151,8 @@ void inline DCL_Init(DCL_HEAD_S *pstHead)
 	pstHead->stNode.pstPrev = &(pstHead->stNode);
 	pstHead->stNode.pstNext = &(pstHead->stNode);
 
+
+    pstHead->uiLiLiLength = 0;
 	return;
 }
 

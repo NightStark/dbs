@@ -681,10 +681,22 @@ ULONG msg_client_ConnThreadInit(VOID *arg)
 STATIC int g_iThreadIdLink = 0;
 STATIC int g_iThreadIdWork = 0;
 
+STATIC VOID * MSG_client_Thread_task_dispatch_Init(VOID *arg)
+{
+    return (VOID *)Server_TaskDispatch_Init(arg);
+
+    //return ERROR_SUCCESS;
+}
+
 ULONG DataBase_client_init(VOID)
 {
+    INT iThreadId = -1;
     CLT_sm_init();
     
+    iThreadId = Thread_server_CreatWithMain(THREAD_TYPE_MAIN_SERVER, 
+            MSG_client_Thread_task_dispatch_Init, 
+            NULL);
+
 	/* 链接线程，负责和Server进程的链接和数据交互 */
 	/*  */
     g_iThreadIdLink = Thread_server_CreateWithEpQMsg(msg_client_ConnThreadInit,

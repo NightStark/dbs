@@ -249,20 +249,41 @@ typedef enum tag_Msg_sub_type_list
     MSG_MNG_START,
     MSG_MNG_JOIN_REQ,
     MSG_MNG_JOIN_RESP,
-    MSG_MNG_CONFIM,
+    MSG_MNG_CONFIRM,
     MSG_MNG_OK,
     MSG_MNG_END,
-    MSG_CTL_START = MSG_MNG_END,
+    MSG_CTL_START = MSG_MNG_END + 1,
+    MSG_CTL_ATTACH,
+    MSG_CTL_ATTACH_RESP,
+    MSG_CTL_UPGRADE,
     MSG_CTL_END,
-    MSG_DAT_START = MSG_CTL_END,
+    MSG_DAT_START = MSG_CTL_END + 1,
     MSG_DAT_END,
 
     _MSG_SUB_MAX_,
 }MSG_SUB_TYPE_EN;
 
+typedef enum tag_Msg_Attach_resp_status_code
+{
+    MSG_ATTACH_RESP_STATUS_SUCCESS = 0,
+    MSG_ATTACH_RESP_STATUS_NEED_UPGRAED,
+
+    MSG_ATTACH_RESP_STATUS_NEED_MAX,
+}MSG_ATTACH_RESP_STATUS_EN;
+
+typedef enum tag_Msg_ctl_upgrade_cmd
+{
+    MSG_CTL_UPGRADE_CMD_NONE = 0,
+    MSG_CTL_UPGRADE_CMD_DO_UPGTADE,
+
+    MSG_CTL_UPGRADE_CMD_MAX,
+}MSG_CTL_UPGRADE_CMD_EN;
+
 /* type in msg list 注意区别 MSG_SUB_TYPE_EN中的MSG_DAT_xxx 
  * 此处为消息结构类型，相当于sub-sub，三级类型。
  * */
+#include <ns_msg_type.h>
+#if 0 //move to <ns_msg_type.h> file
 typedef enum tag_Msg_msg_type 
 {
 	MSG_MSG_TYPE_START = _MSG_SUB_MAX_,
@@ -294,12 +315,15 @@ typedef struct tag_msg_mng_ok
     UINT uiOKID;
 }MSG_MNG_OK_ST;
 
-/************* MSG_MSG_TYPE  message struct defines START*****************/
-typedef struct tag_mmt_devinfo
+
+typedef struct tag_msg_ctl_attach
 {
-	UCHAR ucMac[6];
-}MMT_DEV_INFO_ST;
-/************* MSG_MSG_TYPE  message struct defines END  *****************/
+    UINT uiAttachMode; /* client mode: slave, mange, server. */
+    UINT uiCmdVer; 
+    UINT uiCmdID;
+}MSG_CTL_ATTACH_ST;
+
+#endif
 
 UINT NS_MSG_DATA_ENCODE_USHORT (INOUT UCHAR *pucBufStart, USHORT usData);
 UINT NS_MSG_DATA_ENCODE_UINT (INOUT UCHAR *pucBufStart, UINT uiData);
@@ -371,6 +395,26 @@ INT MSG_normal_recv(INT iConnFd, VOID *pRecvBuf, INT iBufLen);
 INT CLIENT_MSG_recv(MSG_CLT_LINK_ST *pstCltLink, VOID *pRecvBuf, INT iBufLen);
 INT SERVER_MSG_send(IN MSG_SRV_LINK_ST *pstSrvLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
 INT CLIENT_MSG_send(IN MSG_CLT_LINK_ST *pstCltLink, IN VOID *pBuf, IN SIZE_T ssSendBuflen);
-
 ULONG MSG_desc_reg(VOID);
+UINT MSG_DATA_encode_TLV_normal(IN VOID *pStruct, OUT VOID *pDataFlow, UINT uiDataFlowLen, INT iMsgType);
+UINT MSG_DATA_decode_TLV_normal(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct, INT iMsgType);
+
+#if 0
+#define NS_MSG_DESC_REG(stype) \
+    MSG_Desc_Register(stype, \
+            sizeof(stype##_ST), \
+            MSG_DATA_encode_TLV_##stype,  \
+            MSG_DATA_decode_TLV_##stype)
+#endif
+#define NS_MSG_DESC_REG(stype) \
+    MSG_Desc_Register(stype, \
+            sizeof(stype##_ST), \
+            NULL,  \
+            NULL)
+
+#define NS_MSG_DATA_ENCODE_TLV(stype) \
+    /* STATIC */ UINT MSG_DATA_encode_TLV_##stype(IN VOID *pStruct,   OUT VOID *pDataFlow, UINT uiDataFlowLen)
+#define NS_MSG_DATA_DECODE_TLV(stype) \
+    /* STATIC */ UINT MSG_DATA_decode_TLV_##stype(IN VOID *pDataFlow, IN UINT uiDataFlowLen, OUT VOID *pStruct)
+
 #endif //__MSG_H__

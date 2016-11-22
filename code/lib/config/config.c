@@ -7,6 +7,7 @@
 #include <ns_base.h>
 #include <ns_tconv.h>
 #include <ns_config.h>
+#include <version.h>
 
 typedef enum tag_cfg_index
 {
@@ -37,6 +38,8 @@ typedef struct tag_cfg_entry
 
 typedef struct tag_cfg
 {
+    UINT uiClientFwVer;
+
 	UINT uiLocalIPAddr;
 	UINT uiSrvIPAddr;
 	UINT uiSrvPort;
@@ -68,7 +71,7 @@ STATIC INT cfg_get_index_by_name(IN const CHAR *pcCfgName)
 {
 	INT iIndex = 0;
 	for (iIndex = 0; iIndex < ARRAY_SIZE(g_cfg_entry_list); iIndex++) {
-		if (strncmp(pcCfgName, g_cfg_entry_list[iIndex].pcCfgName, sizeof(g_cfg_entry_list[iIndex].pcCfgName))) {
+		if (strncmp(pcCfgName, g_cfg_entry_list[iIndex].pcCfgName, strlen(g_cfg_entry_list[iIndex].pcCfgName))) {
 			return iIndex;
 		}
 	}
@@ -76,7 +79,7 @@ STATIC INT cfg_get_index_by_name(IN const CHAR *pcCfgName)
 	return -1;
 }
 
-ULONG cfg_set(IN const CHAR *pcCfgName, IN const CHAR *pcCfgValue, CFG_INDEX_EN enCfgIndex)
+ULONG cfg_set(IN const CHAR *pcCfgName, IN const CHAR *pcCfgValue)
 {
 	INT i = -1;
 
@@ -120,7 +123,7 @@ ULONG cfg_line_parse(INOUT CHAR *pcLine, IN INT iBufLen, IN INT iLineNo)
 
 	MSG_PRINTF("%s = %s", pcCfgName, pcCfgValue);
 
-	cfg_set(pcCfgName, pcCfgValue, CFG_INDEX_LOCAL_IP);
+	cfg_set(pcCfgName, pcCfgValue);
 
 	return ERROR_SUCCESS;
 }
@@ -159,6 +162,8 @@ INT cfg_init(VOID)
 {
 	pthread_mutex_init(&(g_cfg.cfg_mutex), NULL);
 
+    g_cfg.uiClientFwVer = NS_C_VER_STEP;
+    
 	MSG_PRINTF("start read config file.");
 	if (ERROR_FAILE == cfg_read_cfg_file("ns.cfg")) {
 		ERR_PRINTF("read config file failed.");
@@ -188,4 +193,14 @@ UINT cfg_get_remote_port(void)
 	_CFG_UNLK;
 
 	return iport;
+}
+
+UINT cfg_get_client_fw_ver(void) 
+{
+	UINT uiVer = 0;
+	_CFG_LK;
+	uiVer = g_cfg.uiClientFwVer;
+	_CFG_UNLK;
+
+	return uiVer;
 }

@@ -7,6 +7,10 @@ int : 4 bytes
 long : =  sizeof(void *)
 */
 
+//CHAR  UCHAR SHORT USHORT INT   UINT  LONG  ULONG LLONG ULLONG FLOAT DOUBLE
+
+
+
 typedef char				CHAR; 			/* 1 */
 typedef unsigned char 		UCHAR; 			/* 1 */
 typedef	short 				SHORT;			/* 2 */

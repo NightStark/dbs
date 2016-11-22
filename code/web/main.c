@@ -100,7 +100,7 @@ STATIC INT init(PRUNTYPE_E enPRunType)
 	stThrdMainProc.pfThrdMainExit = webmain_exit_cb;
 	Thread_main_init();
     /******/
-    //DataBase_client_init();
+    DataBase_client_init();
     /******/
 	Thread_main_Loop(&stThrdMainProc);
 

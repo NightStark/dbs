@@ -34,6 +34,7 @@ typedef enum tag_thread_type
     THREAD_TYPE_NONE    = 0,
     THREAD_TYPE_MAIN_SERVER,
     THREAD_TYPE_WORK_SERVER,
+    THREAD_TYPE_WORK_DISPATCH,
     
 	THREAD_TYPE_WEB_DEBGU,
 

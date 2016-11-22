@@ -46,3 +46,6 @@ code.taobao.com
 
 g++ call gcc lib:
     g++ array.c -I include/lib/ -L. -lnsdb
+
+    =========================================
+    server将启动几个work线程，一个调度线程，说有创建的【任务】将被调度到不同的work线程里去！！
