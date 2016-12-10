@@ -21,12 +21,88 @@
 #include <linux/timer.h>
 #include <linux/version.h>
 #include <linux/inet.h>
+#include <net/netfilter/nf_conntrack.h>
+#include <net/netfilter/nf_conntrack_core.h>
+#include <linux/netfilter/nf_conntrack_common.h>
 
 #include "tcp_filter.h"
+
+/*
+typedef unsigned int nf_hookfn(unsigned int hooknum,
+			       struct sk_buff *skb,
+			       const struct net_device *in,
+			       const struct net_device *out,
+			       int (*okfn)(struct sk_buff *));
+                   */
+
+typedef enum tf_data_type {
+    TF_DATA_TYPE_NONE = 0,
+
+    TF_DATA_TYPE_MARK,
+
+    TF_DATA_TYPE_MAX,
+}tf_data_type_en;
+
+struct tf_data
+{
+    tf_data_type_en type;
+    u_int32_t mark;
+};
+
+
+int nf_ct_flow_mark_set(struct sk_buff *skb, u_int32_t mark)
+{
+    struct tf_data *ct_tf = NULL;
+    struct nf_conn *ct = NULL;
+    enum ip_conntrack_info ctinfo;
+
+    ct = nf_ct_get(skb, &ctinfo);
+    if (ct == NULL) {
+        return -1;
+    }
+    if (ct->p_data == NULL) {
+        ct->p_data = kmalloc(sizeof(struct tf_data) ,GFP_ATOMIC);
+        if (ct->p_data == NULL) {
+            return -1;
+        }
+        ct_tf->type = TF_DATA_TYPE_MARK;
+    }
+
+    ct_tf = (struct tf_data *)(ct->p_data);
+    if (ct_tf->type != TF_DATA_TYPE_MARK) {
+        return -1;
+    }
+
+    ct_tf->mark |= mark;
+
+    return 0;
+}
+
+static unsigned int tf_L3_dnat(unsigned int hooknum,
+				      struct sk_buff *skb,
+				      const struct net_device *in,
+				      const struct net_device *out,
+				      int (*okfn)(struct sk_buff *))
+{
+
+    return NF_ACCEPT;
+}
+
+static struct nf_hook_ops tcp_filter_ops[] __read_mostly = {
+    {
+        .owner = THIS_MODULE,
+        .hooknum = NF_INET_PRE_ROUTING, 
+        .pf = PF_INET,/* for lay-3 */
+        .priority = NF_IP_PRI_CONNTRACK+1,  /* make sure conntrack prepare ok.*/
+        .hook = (nf_hookfn *)tf_L3_dnat, /* redirect to portal server */
+    },
+};
 
 static int __init tcp_filter_init(void)
 {
     //__skb_build_skb_v4();
+    nf_register_hooks(tcp_filter_ops, ARRAY_SIZE(tcp_filter_ops));
+
     TF_MSG_PRINTF("init success.");
 
     return 0;
