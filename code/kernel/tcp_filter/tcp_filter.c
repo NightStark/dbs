@@ -34,6 +34,16 @@ typedef unsigned int nf_hookfn(unsigned int hooknum,
 			       const struct net_device *out,
 			       int (*okfn)(struct sk_buff *));
                    */
+#define TF_DEBUG_EN 1
+#if 1
+#define TF_DEBUG(f, s...)   \
+    do {                    \
+        printk("TF [%s][%d]: \n" f, __func__, __LINE__, ##s);  \
+    }while(0)
+#else
+#define TF_DEBUG(f, s...) {}                    
+#endif
+
 
 typedef enum tf_data_type {
     TF_DATA_TYPE_NONE = 0,
@@ -61,7 +71,7 @@ int nf_ct_flow_mark_set(struct sk_buff *skb, u_int32_t mark)
         return -1;
     }
     if (ct->p_data == NULL) {
-        ct->p_data = kmalloc(sizeof(struct tf_data) ,GFP_ATOMIC);
+        ct->p_data = kmalloc(sizeof(struct tf_data) ,GFP_ATOMIC); /* need kfree at destroy this conn */
         if (ct->p_data == NULL) {
             return -1;
         }
@@ -84,6 +94,39 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
 				      const struct net_device *out,
 				      int (*okfn)(struct sk_buff *))
 {
+    int ret = NF_DROP;
+    int head_len = 0;
+    int data_len = 0;
+    char *buf = NULL;
+    struct ethhdr *eh = eth_hdr(skb); 
+    struct iphdr  *ih = ip_hdr(skb);
+    struct tcphdr *th = NULL;
+
+    if (skb->protocol != htons(ETH_P_IP) && skb->protocol != htons(ETH_P_8021Q)) {
+        TF_DEBUG("not ip drop.");
+        return NF_DROP; //TODO:or DROP?
+    }
+
+    if (skb->protocol == htons(ETH_P_8021Q) && ih) {
+        ih = (struct iphdr *)((u8 *)ih + 4);
+    }
+
+    if (ih->protocol != IPPROTO_TCP) { //TODO?Why not use htons
+        TF_DEBUG("not tcp drop.");
+        return NF_DROP; //TODO:or DROP?
+    }
+
+    th = (struct tcphdr *)((u8 *)ih + (ih->ihl * 4));           
+    if (ntohs(th->dest) != 80 && ntohs(th->source) != 80) {
+        TF_DEBUG("not http drop.");
+        return NF_DROP;
+    }
+
+    head_len = (ih->ihl * 4)  + (th->doff * 4);
+    data_len = ntohs(ih->tot_len) - head_len;
+    buf = skb->data + head_len; /* http data */
+
+
 
     return NF_ACCEPT;
 }
