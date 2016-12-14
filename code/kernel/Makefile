@@ -24,8 +24,12 @@ dns-intercept:
 skbb:                                    
 	@echo ======CC=$(CC)=====
 	make -C $(KDIR) M=$(PWD)/skb modules
+tf:                                    
+	@echo ======CC=$(CC)=====
+	make -C $(KDIR) M=$(PWD)/tcp_filter modules
 
 clean:
 	make -C $(PWD)/mod_up clean
 	make -C $(PWD)/dns_intercept clean
 	make -C $(PWD)/skb clean
+	make -C $(PWD)/tcp_filter clean
