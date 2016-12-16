@@ -200,9 +200,9 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u
 {
 	int tcp_len, ip_len, eth_len, total_len, header_len;
 	__wsum tcp_hdr_csum;
-	struct sk_buff *skb = NULL;
-	struct tcphdr   *th = NULL;
-    struct vlan_hdr *vh = NULL;
+	struct sk_buff *new_skb = NULL;
+	struct tcphdr   *new_th = NULL;
+    struct vlan_hdr *new_vh = NULL;
 
 	/* calculate len by protocals */
 	tcp_len = msg_len + sizeof(struct tcphdr);
@@ -212,72 +212,72 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u
 	total_len += LL_MAX_HEADER;
 	header_len = total_len - msg_len;
 
-	/* alloc skb */
-	if (!(skb = alloc_skb(total_len, GFP_KERNEL))) {
+	/* alloc new_skb */
+	if (!(new_skb = alloc_skb(total_len, GFP_KERNEL))) {
 		TF_DEBUG("%s:alloc_skb failed!\n", __func__);
 		return NULL;
 	}
 	/* reserve for header */
-	skb_reserve(skb, header_len);
-	/* copy payload data to skb */
+	skb_reserve(new_skb, header_len);
+	/* copy payload data to new_skb */
 	if (msg_len > 0) {
-		skb_copy_to_linear_data(skb, msg, msg_len);
-		skb->len += msg_len;
+		skb_copy_to_linear_data(new_skb, msg, msg_len);
+		new_skb->len += msg_len;
 	}
 	/* init tcp header info */
-	skb_push(skb, sizeof(struct tcphdr));
-	skb_reset_transport_header(skb);
-	th = tcp_hdr(skb);
-	skb->transport_header = (__u16)(unsigned long)th;
-	memset(th, 0x0, sizeof(struct tcphdr));
-	th->doff = syn?tcp_len/4:5;
-	th->source = sport;
-	th->dest = dport;
-	th->seq = seq;
-	th->ack_seq = ack_seq;
-	th->ack = ack;	
-	th->psh = push;	
-	th->rst = 0;
-	th->fin = fin;/* NB: fin=1, different from url-redirect of url-filter.ko */
-	th->syn = syn;	
-	th->urg = 0;
-	th->urg_ptr = 0;
-	th->window = htons(13857); //TODO?why this num?
-	tf_modify_tcp_option_timestamps((char *)(skb->transport_header + 20), th->doff*4-20);
+	skb_push(new_skb, sizeof(struct tcphdr));
+	skb_reset_transport_header(new_skb);
+	new_th = tcp_hdr(new_skb);
+	new_skb->transport_header = (__u16)(unsigned long)new_th;
+	memset(new_th, 0x0, sizeof(struct tcphdr));
+	new_th->doff = syn?tcp_len/4:5;
+	new_th->source = sport;
+	new_th->dest = dport;
+	new_th->seq = seq;
+	new_th->ack_seq = ack_seq;
+	new_th->ack = ack;	
+	new_th->psh = push;	
+	new_th->rst = 0;
+	new_th->fin = fin;/* NB: fin=1, different from url-redirect of url-filter.ko */
+	new_th->syn = syn;	
+	new_th->urg = 0;
+	new_th->urg_ptr = 0;
+	new_th->window = htons(13857); //TODO?why this num?
+	tf_modify_tcp_option_timestamps((char *)(new_skb->transport_header + 20), new_th->doff*4-20);
 	
-	th->check = 0;
-	skb->csum = 0;
-	tcp_hdr_csum = csum_partial(th, tcp_len, 0);
-	th->check = csum_tcpudp_magic(saddr,
+	new_th->check = 0;
+	new_skb->csum = 0;
+	tcp_hdr_csum = csum_partial(new_th, tcp_len, 0);
+	new_th->check = csum_tcpudp_magic(saddr,
 		daddr, tcp_len, IPPROTO_TCP,tcp_hdr_csum);
-	skb->csum = tcp_hdr_csum;
-	if (!th->check)
-		th->check = CSUM_MANGLED_0;
+	new_skb->csum = tcp_hdr_csum;
+	if (!new_th->check)
+		new_th->check = CSUM_MANGLED_0;
 
-	tf_skb_iphdr_init(skb, IPPROTO_TCP, saddr, daddr, ip_len);
+	tf_skb_iphdr_init(new_skb, IPPROTO_TCP, saddr, daddr, ip_len);
     
     /* copy vlan info if needed */
     if (iskb->protocol == __constant_ntohs(ETH_P_8021Q)) {
-        vh = (struct vlan_hdr *)skb_push(skb, VLAN_HLEN);
-        vh->h_vlan_TCI = vlan_eth_hdr(iskb)->h_vlan_TCI;
-        vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
+        new_vh = (struct vlan_hdr *)skb_push(new_skb, VLAN_HLEN);
+        new_vh->h_vlan_TCI = vlan_eth_hdr(iskb)->h_vlan_TCI;
+        new_vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
     }
 
     /* copy eth heaer info */
-    eh = (struct ethhdr *)skb_push(skb, ETH_HLEN);
-    skb_reset_mac_header(skb);
-    skb->protocol = eth_hdr(iskb)->h_proto;
+    eh = (struct ethhdr *)skb_push(new_skb, ETH_HLEN);
+    skb_reset_mac_header(new_skb);
+    new_skb->protocol = eth_hdr(iskb)->h_proto;
     eh->h_proto = eth_hdr(iskb)->h_proto;
     memcpy(eh->h_source, eth_hdr(iskb)->h_dest, ETH_ALEN);
     memcpy(eh->h_dest, eth_hdr(iskb)->h_source, ETH_ALEN);
 
-	return skb;
+	return new_skb;
 }
 
 int
-wpt_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name)
+tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name, int is_fin)
 {
-    int syn = 0, ack = 1, push = 0, fin = 0;
+    int syn = 0, ack = 1, push = 0, fin = is_fin;
     u32 ack_seq = 1;
     struct sk_buff *pskb = NULL;
     struct vlan_hdr *vh = NULL;
@@ -299,21 +299,6 @@ wpt_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, 
         TF_DEBUG("%s:tf_tcp_new_pack failed!\n", __func__);
         return -1;
     }
-
-    /* copy vlan info if needed */
-    if (skb->protocol == __constant_ntohs(ETH_P_8021Q)) {
-        vh = (struct vlan_hdr *)skb_push(pskb, VLAN_HLEN);
-        vh->h_vlan_TCI = vlan_eth_hdr(skb)->h_vlan_TCI;
-        vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
-    }
-
-    /* copy eth heaer info */
-    eh = (struct ethhdr *)skb_push(pskb, ETH_HLEN);
-    skb_reset_mac_header(pskb);
-    pskb->protocol = eth_hdr(skb)->h_proto;
-    eh->h_proto = eth_hdr(skb)->h_proto;
-    memcpy(eh->h_source, eth_hdr(skb)->h_dest, ETH_ALEN);
-    memcpy(eh->h_dest, eth_hdr(skb)->h_source, ETH_ALEN);
 
     /* put skb to dev queue to xmit */
     if (out_dev_name) {
@@ -370,21 +355,6 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 		TF_DEBUG("%s:wpt_tcp_new_pack failed!\n", __func__);
 		return -1;
 	}
-
-	/* copy vlan info if needed */
-	if (skb->protocol == __constant_ntohs(ETH_P_8021Q)) {
-		vh = (struct vlan_hdr *)skb_push(pskb, VLAN_HLEN);
-		vh->h_vlan_TCI = vlan_eth_hdr(skb)->h_vlan_TCI;
-		vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
-	}
-
-	/* copy eth heaer info */
-	eh = (struct ethhdr *)skb_push(pskb, ETH_HLEN);
-	skb_reset_mac_header(pskb);
-	pskb->protocol = eth_hdr(skb)->h_proto;
-	eh->h_proto = eth_hdr(skb)->h_proto;
-	memcpy(eh->h_source, eth_hdr(skb)->h_dest, ETH_ALEN);
-	memcpy(eh->h_dest, eth_hdr(skb)->h_source, ETH_ALEN);
 	
 	/* put skb to dev queue to xmit */
 	if (out_dev_name) {
@@ -412,6 +382,9 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 }
 
 static char ignore_mac[6] = {0x00,0x50,0x56,0xC0,0x00,0x10};
+
+#define BEGIN_WITH_HTTP_DATA(d, l) \
+    (((d >= 3) && (0 == strncmp(buf, "GET",3))) ||((data_len >= 4) && (0 == strncmp(buf, "POST",4))))
 
 static unsigned int tf_L3_dnat(unsigned int hooknum,
 				      struct sk_buff *skb,
@@ -472,8 +445,55 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     if (th->fin) {
         /* 4-way handshake to web server */
         if ((ntohs(th->source) == 80) && (flow_mark & TF_SKB_MARK_NEED_FAKE_FIN)) {
+            tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 0);
+            tf_destroy_skb_conntrack(skb);
             //tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
-            //tf_destroy_skb_conntrack();
+            return NF_DROP;
+        }
+        if ((ntohs(th->dest) == 80) && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
+            tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 0);
+            tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 1);
+            return NF_DROP;
+        }
+    }
+
+    if (th->syn || (th->ack && !th->psh)) {
+        if (th->syn && (!th->psh)) {
+            /* let first syn go reach the real server 
+             * not first fake the syn
+             * */
+            if (flow_mark & TF_SKB_MARK_NORMAL_PKT) {
+                tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
+                return NF_DROP;
+            }
+            nf_ct_flow_mark_set(skb, TF_SKB_MARK_STA_HAS_SENT_SYN);
+        }
+
+        if (th->ack) {
+            if (th->ack && (!th->psh)) {
+                /* http get in tcp segment */
+            }
+            
+            //TODO:??
+            if (ntohs(th->source) == 80 && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
+                //debug("%s,%d, web serv ack to usr, but it's invalid for usr , drop it.\n", __func__, __LINE__);
+                return NF_DROP;
+            }
+            //TODO:??
+            if (ntohs(th->dest) == 80 && (flow_mark & TF_SKB_MARK_NORMAL_PKT) == 0) {
+                //debug("%s,%d, usr's ack to serv, but it's invalid for web server, drop it.\n", __func__, __LINE__);
+                return NF_DROP;
+            }
+            nf_ct_flow_mark_set(skb, TF_SKB_MARK_NORMAL_PKT);
+            return NF_ACCEPT;
+        }
+
+        /* sta push data */
+        if (ntohs(th->dest) == 80 && th->psh && th->ack) {
+            if (!BEGIN_WITH_HTTP_DATA(buf, data_len)) {
+                TF_DEBUG("unknow data in 80 port, drop.");
+                return NF_DROP;
+            }
         }
     }
 
