@@ -88,6 +88,32 @@ int nf_ct_flow_mark_set(struct sk_buff *skb, u_int32_t mark)
     return 0;
 }
 
+int nf_ct_flow_mark_get(struct sk_buff *skb, u_int32_t *mark)
+{
+    struct tf_data *ct_tf = NULL;
+    struct nf_conn *ct = NULL;
+    enum ip_conntrack_info ctinfo;
+    ct = nf_ct_get(skb, &ctinfo);
+    if (ct == NULL) {
+        TF_DEBUG("get nf ct failed");
+        return -1;
+    }
+    if (ct->p_data == NULL) {
+        TF_DEBUG("nf ct data is NULL");
+        return -1;
+    }
+
+    ct_tf = (struct tf_data *)(ct->p_data);
+    if (ct_tf->type != TF_DATA_TYPE_MARK) {
+        TF_DEBUG("nf ct data is not mark data");
+        return -1;
+    }
+
+    *mark = ct_tf->mark;
+
+    return 0;
+}
+
 #define ADDR_LEN      (6)
 
 int _mac_addr_cmp(u_int8_t *src, u_int8_t *dst)
@@ -99,6 +125,21 @@ int _mac_addr_cmp(u_int8_t *src, u_int8_t *dst)
             return 1;
     }
 
+    return 0;
+}
+
+static int
+tf_destroy_skb_conntrack(struct sk_buff *skb)
+{
+    struct nf_conn *ct = NULL;
+    enum ip_conntrack_info ctinfo;
+
+    ct = nf_ct_get(skb, &ctinfo);
+    if (ct) {
+        nf_ct_kill_acct(ct, ctinfo, skb);
+    } else {
+        TF_DEBUG("ct is NULL.\n");
+    }
     return 0;
 }
 
@@ -154,13 +195,14 @@ tf_skb_iphdr_init(struct sk_buff *skb, u16 protocol, u32 saddr, u32 daddr, int l
 }
 
 static struct sk_buff *
-tf_tcp_new_pack(u32 saddr, u32 daddr, u16 sport, u16 dport,
+tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u16 sport, u16 dport,
 		u32 seq, u32 ack_seq, u8 *msg, int msg_len, int syn, int ack, int push, int fin)
 {
 	int tcp_len, ip_len, eth_len, total_len, header_len;
 	__wsum tcp_hdr_csum;
 	struct sk_buff *skb = NULL;
-	struct tcphdr *th = NULL;
+	struct tcphdr   *th = NULL;
+    struct vlan_hdr *vh = NULL;
 
 	/* calculate len by protocals */
 	tcp_len = msg_len + sizeof(struct tcphdr);
@@ -186,7 +228,7 @@ tf_tcp_new_pack(u32 saddr, u32 daddr, u16 sport, u16 dport,
 	skb_push(skb, sizeof(struct tcphdr));
 	skb_reset_transport_header(skb);
 	th = tcp_hdr(skb);
-	skb->transport_header = (sk_buff_data_t)th;
+	skb->transport_header = (__u16)(unsigned long)th;
 	memset(th, 0x0, sizeof(struct tcphdr));
 	th->doff = syn?tcp_len/4:5;
 	th->source = sport;
@@ -213,9 +255,91 @@ tf_tcp_new_pack(u32 saddr, u32 daddr, u16 sport, u16 dport,
 		th->check = CSUM_MANGLED_0;
 
 	tf_skb_iphdr_init(skb, IPPROTO_TCP, saddr, daddr, ip_len);
+    
+    /* copy vlan info if needed */
+    if (iskb->protocol == __constant_ntohs(ETH_P_8021Q)) {
+        vh = (struct vlan_hdr *)skb_push(skb, VLAN_HLEN);
+        vh->h_vlan_TCI = vlan_eth_hdr(iskb)->h_vlan_TCI;
+        vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
+    }
+
+    /* copy eth heaer info */
+    eh = (struct ethhdr *)skb_push(skb, ETH_HLEN);
+    skb_reset_mac_header(skb);
+    skb->protocol = eth_hdr(iskb)->h_proto;
+    eh->h_proto = eth_hdr(iskb)->h_proto;
+    memcpy(eh->h_source, eth_hdr(iskb)->h_dest, ETH_ALEN);
+    memcpy(eh->h_dest, eth_hdr(iskb)->h_source, ETH_ALEN);
 
 	return skb;
 }
+
+int
+wpt_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name)
+{
+    int syn = 0, ack = 1, push = 0, fin = 0;
+    u32 ack_seq = 1;
+    struct sk_buff *pskb = NULL;
+    struct vlan_hdr *vh = NULL;
+    struct ethhdr *eh = NULL;
+
+    ack_seq = ntohl(th->seq) + 1;
+    ack_seq = htonl(ack_seq);
+
+    if(!(pskb = tf_tcp_new_pack(skb, eh,
+                    iph->daddr, 
+                    iph->saddr, 
+                    th->dest, 
+                    th->source, 
+                    th->ack_seq, 
+                    ack_seq, 
+                    skb->transport_header+20+20/*FixMe:why is 40?*/, 
+                    0/*sizeof(tcphdr)*/, 
+                    syn, ack, push, fin))) {
+        TF_DEBUG("%s:tf_tcp_new_pack failed!\n", __func__);
+        return -1;
+    }
+
+    /* copy vlan info if needed */
+    if (skb->protocol == __constant_ntohs(ETH_P_8021Q)) {
+        vh = (struct vlan_hdr *)skb_push(pskb, VLAN_HLEN);
+        vh->h_vlan_TCI = vlan_eth_hdr(skb)->h_vlan_TCI;
+        vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
+    }
+
+    /* copy eth heaer info */
+    eh = (struct ethhdr *)skb_push(pskb, ETH_HLEN);
+    skb_reset_mac_header(pskb);
+    pskb->protocol = eth_hdr(skb)->h_proto;
+    eh->h_proto = eth_hdr(skb)->h_proto;
+    memcpy(eh->h_source, eth_hdr(skb)->h_dest, ETH_ALEN);
+    memcpy(eh->h_dest, eth_hdr(skb)->h_source, ETH_ALEN);
+
+    /* put skb to dev queue to xmit */
+    if (out_dev_name) {
+        pskb->dev = dev_get_by_name(&init_net, out_dev_name);
+        if (pskb->dev) {
+            dev_put(pskb->dev);
+            if (dev_queue_xmit(pskb) < 0){
+                //TF_DEBUG("%s dev_queue_xmit(%s) failed!\n", __func__, pskb->dev->name);
+            } else {
+                //TF_DEBUG("%s dev_queue_xmit(%s) ok!\n", __func__, pskb->dev->name);
+            }
+        } else {
+            kfree_skb(pskb);
+            //printk(KERN_ERR"%s failed! out_dev_name[%s]\n", __func__, out_dev_name);
+            return -1;
+        }
+        return 0;
+    } else {
+        kfree_skb(pskb);
+        TF_DEBUG("%s failed!\n", __func__);
+        return -1;
+    }
+
+    return 0;
+}
+
 
 static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name)
 {
@@ -233,8 +357,9 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 	ack_seq = ntohl(th->seq) + tcp_len;
 	ack_seq = htonl(ack_seq);
 
-	skb->transport_header = ((void*)iph +(iph->ihl << 2));
-	if(!(pskb = tf_tcp_new_pack(iph->daddr, 
+	skb->transport_header = (__u16)(unsigned long)((void*)iph +(iph->ihl << 2));
+	if(!(pskb = tf_tcp_new_pack(skb, eh,
+                    iph->daddr, 
                                 iph->saddr, 
                                 th->dest, 
                                 th->source, 
@@ -267,9 +392,9 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 		if (pskb->dev) {
 			dev_put(pskb->dev);
 			if (dev_queue_xmit(pskb) < 0){
-				//debug("%s dev_queue_xmit(%s) failed!\n", __func__, pskb->dev->name);
+				//TF_DEBUG("%s dev_queue_xmit(%s) failed!\n", __func__, pskb->dev->name);
 			} else {
-				//debug("%s dev_queue_xmit(%s) ok!\n", __func__, pskb->dev->name);
+				//TF_DEBUG("%s dev_queue_xmit(%s) ok!\n", __func__, pskb->dev->name);
 			}
 		} else {
             kfree_skb(pskb);
@@ -294,10 +419,11 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
 				      const struct net_device *out,
 				      int (*okfn)(struct sk_buff *))
 {
-    int ret = NF_DROP;
+    int ret      = NF_DROP;
     int head_len = 0;
     int data_len = 0;
-    char *buf = NULL;
+    char *buf    = NULL;
+    u_int32_t flow_mark = 0;
     struct ethhdr *eh = eth_hdr(skb); 
     struct iphdr  *ih = ip_hdr(skb);
     struct tcphdr *th = NULL;
@@ -331,11 +457,25 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     data_len = ntohs(ih->tot_len) - head_len;
     buf = skb->data + head_len; /* http data */
 
+    if (nf_ct_flow_mark_get(skb, &flow_mark) != 0) {
+        TF_DEBUG("get nf ct flow mark failed.");
+        return NF_DROP;
+    }
+
+    flow_mark &= TF_SKB_MARK_MASK;
+
     if (th->rst) {
         TF_DEBUG("TCP RST accept.");
         return NF_ACCEPT;
     }
 
+    if (th->fin) {
+        /* 4-way handshake to web server */
+        if ((ntohs(th->source) == 80) && (flow_mark & TF_SKB_MARK_NEED_FAKE_FIN)) {
+            //tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
+            //tf_destroy_skb_conntrack();
+        }
+    }
 
 
     return NF_ACCEPT;
