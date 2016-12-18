@@ -7,6 +7,27 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <stdarg.h>
+
+static void
+__dump_data(unsigned char *ptr, int len, const char *info_fmt, ...)
+{
+    va_list ap;
+    int i;
+    printf("\n************************\n");
+    printf("dump [");
+    va_start(ap, info_fmt);
+    vprintf(info_fmt, ap);
+    va_end(ap);
+    printf("]\n");
+
+    for (i = 0; i < len; i++) {
+        if (!(i%16))
+            printf("\n %04x", i);
+        printf(" %02x", ptr[i]);
+    }
+    printf("\n************************\n");
+}
 
 static inline void *_init_buf(void**p, int iLen)
 {
@@ -69,9 +90,9 @@ int send_wol(unsigned char *mac)
 
     bzero(&address,sizeof(address));
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr=inet_addr("255.255.255.255");//这里不一样
-    //address.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-    address.sin_port = htons(0);
+    //address.sin_addr.s_addr=inet_addr("255.255.255.255");//这里不一样
+    address.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+    address.sin_port = htons(7);
 
     //创建一个 UDP socket
     fd=socket(AF_INET, SOCK_DGRAM, 0);//IPV4  SOCK_DGRAM 数据报套接字（UDP协议）
@@ -82,6 +103,9 @@ int send_wol(unsigned char *mac)
 
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_BROADCAST, &on, sizeof(on)) < 0) {
         printf("socket opt set failed.\n");
+        close(fd);
+        fd = -1;
+        return -1;
     }
 
     p = buf;
@@ -92,6 +116,8 @@ int send_wol(unsigned char *mac)
     }
 
     data_len = p - buf;
+
+    __dump_data(buf, data_len, "wol pkt");
 
     ret = sendto(fd, buf, data_len, 0, (struct sockaddr *)&address, sizeof(address));
     perror("sendto");
