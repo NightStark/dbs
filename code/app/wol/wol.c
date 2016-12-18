@@ -135,9 +135,12 @@ int main(int argc, char **argv)
     unsigned char dest_mac_str[32] = {0};
     unsigned char dest_mac[6] = {0};
 
-	while (1){
+    printf("start wol\n");
+
+    while (1){
 		c = getopt (argc, argv, "m:");
-		if (c == -1)
+        printf("c = %d\n", c);
+		if (c == 0xFF)
 			break;
         switch (c){
             case 'm':
