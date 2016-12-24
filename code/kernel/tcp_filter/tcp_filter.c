@@ -44,6 +44,46 @@ typedef unsigned int nf_hookfn(unsigned int hooknum,
 #define TF_DEBUG(f, s...) {}                    
 #endif
 
+int nf_ct_flow_mark_get(struct sk_buff *skb, u_int32_t *mark);
+
+/* NOTE:can never be inlined because it uses variable argument lists */
+static int
+_tf_skb_makr_log(const char *f, int l, struct sk_buff *skb, const char *fmt, ...)
+{
+	int i = 0;
+    u_int32_t mark;
+    char buf[128];
+	va_list args;
+
+    if (nf_ct_flow_mark_get(skb, &mark) != 0) {
+        TF_DEBUG("get nf ct flow mark failed.");
+        return NF_DROP;
+    }
+
+	va_start(args, fmt);
+	i = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+    i += snprintf(buf + i, sizeof(buf) - i, "%s", "-----mark:");
+
+    if (mark & TF_SKB_MARK_NEED_FAKE_FIN) {
+        i += snprintf(buf + i, sizeof(buf) - i, "%s", "[NEED FAKE FIN]");
+    }
+    if (mark & TF_SKB_MARK_NORMAL_PKT) {
+        i += snprintf(buf + i, sizeof(buf) - i, "%s", "[NORMAL PKT]");
+    }
+    if (mark & TF_SKB_MARK_STA_HAS_SENT_SYN) {
+        i += snprintf(buf + i, sizeof(buf) - i, "%s", "[HAS SENT SYN]");
+    }
+    i += snprintf(buf + i, sizeof(buf) - i, "%s", "-----\n");
+
+    printk("[%s][%d]:%s\n", f, l, buf);
+
+    return 0;
+}
+
+#define TF_SKB_MARK_LOG(skb, f, s...) \
+    _tf_skb_makr_log(__func__, __LINE__, skb, f, ##s);
 
 typedef enum tf_data_type {
     TF_DATA_TYPE_NONE = 0,
@@ -280,7 +320,6 @@ tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
     int syn = 0, ack = 1, push = 0, fin = is_fin;
     u32 ack_seq = 1;
     struct sk_buff *pskb = NULL;
-    struct vlan_hdr *vh = NULL;
     struct ethhdr *eh = NULL;
 
     ack_seq = ntohl(th->seq) + 1;
@@ -293,7 +332,7 @@ tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
                     th->source, 
                     th->ack_seq, 
                     ack_seq, 
-                    skb->transport_header+20+20/*FixMe:why is 40?*/, 
+                    (u8 *)(skb->transport_header + 20 + 20)/*FixMe:why is 40?*/, 
                     0/*sizeof(tcphdr)*/, 
                     syn, ack, push, fin))) {
         TF_DEBUG("%s:tf_tcp_new_pack failed!\n", __func__);
@@ -331,7 +370,6 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 	int tcp_len, seq = 0xf7bc4e8b/* should be random, fix it(0xf7bc4e8b) for wireshare display syn+ack ok */, syn = 1, ack = 1, push = 0, fin = 0;
 	u32 ack_seq = 1;
 	struct sk_buff *pskb = NULL;
-	struct vlan_hdr *vh = NULL;
 	struct ethhdr *eh = NULL;
 
 	/* recalculate acknowledge sequeue number */
@@ -384,7 +422,7 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 static char ignore_mac[6] = {0x00,0x50,0x56,0xC0,0x00,0x10};
 
 #define BEGIN_WITH_HTTP_DATA(d, l) \
-    (((d >= 3) && (0 == strncmp(buf, "GET",3))) ||((data_len >= 4) && (0 == strncmp(buf, "POST",4))))
+    ((((l) >= 3) && (0 == strncmp((d), "GET",3))) ||(((l)>= 4) && (0 == strncmp((d), "POST",4))))
 
 static unsigned int tf_L3_dnat(unsigned int hooknum,
 				      struct sk_buff *skb,
@@ -443,15 +481,19 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     }
 
     if (th->fin) {
+        TF_SKB_MARK_LOG(skb, "fin");
         /* 4-way handshake to web server */
         if ((ntohs(th->source) == 80) && (flow_mark & TF_SKB_MARK_NEED_FAKE_FIN)) {
+            TF_SKB_MARK_LOG(skb, "fake ack4fin to server");
             tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 0);
             tf_destroy_skb_conntrack(skb);
             //tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
             return NF_DROP;
         }
         if ((ntohs(th->dest) == 80) && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
+            TF_SKB_MARK_LOG(skb, "fake ack4fin to sta");
             tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 0);
+            TF_SKB_MARK_LOG(skb, "fake fin to sta");
             tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 1);
             return NF_DROP;
         }
@@ -462,8 +504,10 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
             /* let first syn go reach the real server 
              * not first fake the syn
              * */
+            TF_SKB_MARK_LOG(skb, "syn pkt");
             if (flow_mark & TF_SKB_MARK_NORMAL_PKT) {
                 tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
+                TF_SKB_MARK_LOG(skb, "fake syn ack");
                 return NF_DROP;
             }
             nf_ct_flow_mark_set(skb, TF_SKB_MARK_STA_HAS_SENT_SYN);
@@ -490,6 +534,7 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
 
         /* sta push data */
         if (ntohs(th->dest) == 80 && th->psh && th->ack) {
+            TF_SKB_MARK_LOG(skb, "psh data");
             if (!BEGIN_WITH_HTTP_DATA(buf, data_len)) {
                 TF_DEBUG("unknow data in 80 port, drop.");
                 return NF_DROP;
@@ -501,12 +546,37 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     return NF_ACCEPT;
 }
 
+unsigned int tf_L3_get_input_interface(
+        unsigned int hooknum,
+        struct sk_buff * skb,
+        const struct net_device *in,
+        const struct net_device *out,
+        int(*fn)(struct sk_buff *)
+        )
+{
+
+    if (!skb->input_if[0]) {
+        strcpy(skb->input_if, in->name);
+        TF_DEBUG("get input if name:[%s]", skb->input_if);
+    }
+
+    return NF_ACCEPT;
+}
+
+
 static struct nf_hook_ops tcp_filter_ops[] __read_mostly = {
+    {
+        .owner = THIS_MODULE,
+        .hooknum = NF_INET_PRE_ROUTING,     
+        .pf = PF_INET,/* for lay-3 */
+        .priority = NF_IP_PRI_CONNTRACK + 1,
+        .hook = (nf_hookfn *)tf_L3_get_input_interface,    /* set mark at skb which matched rule*/
+    },
     {
         .owner = THIS_MODULE,
         .hooknum = NF_INET_PRE_ROUTING, 
         .pf = PF_INET,/* for lay-3 */
-        .priority = NF_IP_PRI_CONNTRACK+1,  /* make sure conntrack prepare ok.*/
+        .priority = NF_IP_PRI_CONNTRACK + 1,  /* make sure conntrack prepare ok.*/
         .hook = (nf_hookfn *)tf_L3_dnat, /* redirect to portal server */
     },
 };
