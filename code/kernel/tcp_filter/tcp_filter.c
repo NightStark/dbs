@@ -44,6 +44,17 @@ typedef unsigned int nf_hookfn(unsigned int hooknum,
 #define TF_DEBUG(f, s...) {}                    
 #endif
 
+spinlock_t g_tf_lock; /* = SPIN_LOCK_UNLOCKED*/;
+
+#define TF_LOCK \
+    do { \
+        spin_lock(&g_tf_lock); \
+    }while(0)
+#define TF_UNLOCK \
+    do { \
+        spin_unlock(&g_tf_lock); \
+    }while(0)
+
 int nf_ct_flow_mark_get(struct sk_buff *skb, u_int32_t *mark);
 
 /* NOTE:can never be inlined because it uses variable argument lists */
@@ -108,13 +119,17 @@ int nf_ct_flow_mark_set(struct sk_buff *skb, u_int32_t mark)
 
     ct = nf_ct_get(skb, &ctinfo);
     if (ct == NULL) {
+        TF_DEBUG("skb without nfct.");
         return -1;
     }
     if (ct->p_data == NULL) {
         ct->p_data = kmalloc(sizeof(struct tf_data) ,GFP_ATOMIC); /* need kfree at destroy this conn */
         if (ct->p_data == NULL) {
+            TF_DEBUG("oom.");
             return -1;
         }
+        OS_MemZeroSet(ct->p_data, sizeof(struct tf_data));
+        ct_tf = (struct tf_data*)(ct->p_data);
         ct_tf->type = TF_DATA_TYPE_MARK;
     }
 
@@ -140,7 +155,10 @@ int nf_ct_flow_mark_get(struct sk_buff *skb, u_int32_t *mark)
     }
     if (ct->p_data == NULL) {
         TF_DEBUG("nf ct data is NULL");
-        return -1;
+        if (nf_ct_flow_mark_set(skb, TF_SKB_MARK_INIT) < 0) {
+            TF_DEBUG("nf ct data init failed.");
+            return -1;
+        }
     }
 
     ct_tf = (struct tf_data *)(ct->p_data);
@@ -319,13 +337,14 @@ tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
 {
     int syn = 0, ack = 1, push = 0, fin = is_fin;
     u32 ack_seq = 1;
-    struct sk_buff *pskb = NULL;
+    struct sk_buff *new_skb = NULL;
     struct ethhdr *eh = NULL;
 
     ack_seq = ntohl(th->seq) + 1;
     ack_seq = htonl(ack_seq);
 
-    if(!(pskb = tf_tcp_new_pack(skb, eh,
+    TF_DEBUG("tf_tcp_new_pack is_fin:%d ...\n", is_fin);
+    if(!(new_skb = tf_tcp_new_pack(skb, eh,
                     iph->daddr, 
                     iph->saddr, 
                     th->dest, 
@@ -338,25 +357,27 @@ tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
         TF_DEBUG("%s:tf_tcp_new_pack failed!\n", __func__);
         return -1;
     }
+    TF_DEBUG("tf_tcp_new_pack over.\n");
 
+    TF_DEBUG("skb=0x%x, out_dev_name=%s.\n", (unsigned int)skb, out_dev_name);
     /* put skb to dev queue to xmit */
     if (out_dev_name) {
-        pskb->dev = dev_get_by_name(&init_net, out_dev_name);
-        if (pskb->dev) {
-            dev_put(pskb->dev);
-            if (dev_queue_xmit(pskb) < 0){
-                //TF_DEBUG("%s dev_queue_xmit(%s) failed!\n", __func__, pskb->dev->name);
+        new_skb->dev = dev_get_by_name(&init_net, out_dev_name);
+        if (new_skb->dev) {
+            dev_put(new_skb->dev);
+            if (dev_queue_xmit(new_skb) < 0){
+                TF_DEBUG("dev_queue_xmit(%s) failed!\n", new_skb->dev->name);
             } else {
-                //TF_DEBUG("%s dev_queue_xmit(%s) ok!\n", __func__, pskb->dev->name);
+                TF_DEBUG("dev_queue_xmit(%s) ok!\n", new_skb->dev->name);
             }
         } else {
-            kfree_skb(pskb);
-            //printk(KERN_ERR"%s failed! out_dev_name[%s]\n", __func__, out_dev_name);
+            kfree_skb(new_skb);
+            TF_DEBUG("failed! out_dev_name[%s]\n", out_dev_name);
             return -1;
         }
         return 0;
     } else {
-        kfree_skb(pskb);
+        kfree_skb(new_skb);
         TF_DEBUG("%s failed!\n", __func__);
         return -1;
     }
@@ -365,11 +386,12 @@ tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
 }
 
 
-static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name)
+static int 
+tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name)
 {
 	int tcp_len, seq = 0xf7bc4e8b/* should be random, fix it(0xf7bc4e8b) for wireshare display syn+ack ok */, syn = 1, ack = 1, push = 0, fin = 0;
 	u32 ack_seq = 1;
-	struct sk_buff *pskb = NULL;
+	struct sk_buff *new_skb = NULL;
 	struct ethhdr *eh = NULL;
 
 	/* recalculate acknowledge sequeue number */
@@ -381,7 +403,9 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 	ack_seq = htonl(ack_seq);
 
 	skb->transport_header = (__u16)(unsigned long)((void*)iph +(iph->ihl << 2));
-	if(!(pskb = tf_tcp_new_pack(skb, eh,
+
+    TF_DEBUG("tf_tcp_new_pack ...");
+	if(!(new_skb = tf_tcp_new_pack(skb, eh,
                     iph->daddr, 
                                 iph->saddr, 
                                 th->dest, 
@@ -393,25 +417,27 @@ static int tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tc
 		TF_DEBUG("%s:wpt_tcp_new_pack failed!\n", __func__);
 		return -1;
 	}
+    TF_DEBUG("tf_tcp_new_pack over");
 	
+    TF_DEBUG("skb=0x%x, out_dev_name=%s.", (unsigned int)skb, out_dev_name);
 	/* put skb to dev queue to xmit */
 	if (out_dev_name) {
-		pskb->dev = dev_get_by_name(&init_net, out_dev_name);
-		if (pskb->dev) {
-			dev_put(pskb->dev);
-			if (dev_queue_xmit(pskb) < 0){
-				//TF_DEBUG("%s dev_queue_xmit(%s) failed!\n", __func__, pskb->dev->name);
+		new_skb->dev = dev_get_by_name(&init_net, out_dev_name);
+		if (new_skb->dev) {
+			dev_put(new_skb->dev);
+			if (dev_queue_xmit(new_skb) < 0){
+				TF_DEBUG("dev_queue_xmit(%s) failed !", new_skb->dev->name);
 			} else {
-				//TF_DEBUG("%s dev_queue_xmit(%s) ok!\n", __func__, pskb->dev->name);
+				TF_DEBUG("dev_queue_xmit(%s) ok !", new_skb->dev->name);
 			}
 		} else {
-            kfree_skb(pskb);
-            //printk(KERN_ERR"%s failed! out_dev_name[%s]\n", __func__, out_dev_name);
+            kfree_skb(new_skb);
+            TF_DEBUG("failed! out_dev_name[%s]!", out_dev_name);
             return -1;
         }
 		return 0;
 	} else {
-		kfree_skb(pskb);
+		kfree_skb(new_skb);
 		TF_DEBUG("%s failed!\n", __func__);
 		return -1;
 	}
@@ -446,7 +472,8 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
 
     if (skb->protocol != htons(ETH_P_IP) && skb->protocol != htons(ETH_P_8021Q)) {
         TF_DEBUG("not ip drop.");
-        return NF_DROP; //TODO:or DROP?
+        //return NF_DROP; //TODO:or DROP?
+        return NF_ACCEPT; //TODO:or DROP?
     }
 
     if (skb->protocol == htons(ETH_P_8021Q) && ih) {
@@ -455,22 +482,26 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
 
     if (ih->protocol != IPPROTO_TCP) { //TODO?Why not use htons
         TF_DEBUG("not tcp drop.");
-        return NF_DROP; //TODO:or DROP?
+        //return NF_DROP; //TODO:or DROP?
+        return NF_ACCEPT; //TODO:or DROP?
     }
 
     th = (struct tcphdr *)((u8 *)ih + (ih->ihl * 4));           
     if (ntohs(th->dest) != 80 && ntohs(th->source) != 80) {
         TF_DEBUG("not http drop.");
-        return NF_DROP;
+        //return NF_DROP;
+        return NF_ACCEPT; //TODO:or DROP?
     }
 
+    TF_DEBUG("get http pkt...");
     head_len = (ih->ihl * 4)  + (th->doff * 4);
     data_len = ntohs(ih->tot_len) - head_len;
     buf = skb->data + head_len; /* http data */
 
     if (nf_ct_flow_mark_get(skb, &flow_mark) != 0) {
         TF_DEBUG("get nf ct flow mark failed.");
-        return NF_DROP;
+        //return NF_DROP;
+        return NF_ACCEPT; //TODO:or DROP?
     }
 
     flow_mark &= TF_SKB_MARK_MASK;
@@ -506,18 +537,21 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
              * */
             TF_SKB_MARK_LOG(skb, "syn pkt");
             if (flow_mark & TF_SKB_MARK_NORMAL_PKT) {
+                TF_SKB_MARK_LOG(skb, "fake syn ack ...");
                 tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
-                TF_SKB_MARK_LOG(skb, "fake syn ack");
+                TF_SKB_MARK_LOG(skb, "fake syn ack over");
                 return NF_DROP;
             }
             nf_ct_flow_mark_set(skb, TF_SKB_MARK_STA_HAS_SENT_SYN);
         }
 
         if (th->ack) {
+            TF_SKB_MARK_LOG(skb, "ack pkt");
             if (th->ack && (!th->psh)) {
                 /* http get in tcp segment */
             }
             
+            TF_SKB_MARK_LOG(skb, "TODO:??");
             //TODO:??
             if (ntohs(th->source) == 80 && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
                 //debug("%s,%d, web serv ack to usr, but it's invalid for usr , drop it.\n", __func__, __LINE__);
@@ -555,10 +589,12 @@ unsigned int tf_L3_get_input_interface(
         )
 {
 
+    TF_LOCK;
     if (!skb->input_if[0]) {
-        strcpy(skb->input_if, in->name);
-        TF_DEBUG("get input if name:[%s]", skb->input_if);
+        snprintf(skb->input_if, sizeof(skb->input_if), "%s", in->name);
+        TF_DEBUG("skb:0x%x, get input if name:[%s]", (unsigned int)skb, skb->input_if);
     }
+    TF_UNLOCK;
 
     return NF_ACCEPT;
 }
@@ -584,6 +620,7 @@ static struct nf_hook_ops tcp_filter_ops[] __read_mostly = {
 static int __init tcp_filter_init(void)
 {
     //__skb_build_skb_v4();
+	spin_lock_init(&g_tf_lock);
     nf_register_hooks(tcp_filter_ops, ARRAY_SIZE(tcp_filter_ops));
 
     TF_MSG_PRINTF("init success.");
