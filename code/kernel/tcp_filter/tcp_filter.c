@@ -27,6 +27,7 @@
 
 #include "tcp_filter.h"
 
+
 /*
 typedef unsigned int nf_hookfn(unsigned int hooknum,
 			       struct sk_buff *skb,
@@ -34,14 +35,27 @@ typedef unsigned int nf_hookfn(unsigned int hooknum,
 			       const struct net_device *out,
 			       int (*okfn)(struct sk_buff *));
                    */
+
+#define _XINT(x) \
+    (unsigned int)(x)
+
 #define TF_DEBUG_EN 1
 #if 1
 #define TF_DEBUG(f, s...)   \
     do {                    \
         printk("TF [%s][%d]: " f "\n", __func__, __LINE__, ##s);  \
     }while(0)
+
+#define _OS_MemCpy(_d, _s, _n, _f, _l)  \
+    do { \
+        printk("TF os memcpy at [%s][%d], _d=0x%x, _s=0x%x, _n=%d\n", _f, _l, _XINT(_d), _XINT(_s), _n);  \
+        memcpy(_d, _s, _n) ;\
+    } while (0)
+#define OS_MemCpy(_d, _s, _n)  _OS_MemCpy(_d, _s, _n, __func__, __LINE__)
+
 #else
 #define TF_DEBUG(f, s...) {}                    
+#define OS_MemCpy(_d, _s, _n)  memcpy(_d, _s, _n)
 #endif
 
 spinlock_t g_tf_lock; /* = SPIN_LOCK_UNLOCKED*/;
@@ -214,9 +228,9 @@ tf_modify_tcp_option_timestamps(char *msg, int msg_len)
 	while(i< msg_len) {
 		ss = s+i;
 		if (*ss == 8 && *(ss+1) == 10) {
-			memcpy(ss+6, ss+2, 4);
+			OS_MemCpy(ss+6, ss+2, 4);
 			s_val = htonl(jiffies);			
-			memcpy(ss+2, &s_val, 4);
+			OS_MemCpy(ss+2, &s_val, 4);
 			i += 10;
 		} else if (*ss == 1 ||*ss == 0) {
 			i += 1;
@@ -253,35 +267,56 @@ tf_skb_iphdr_init(struct sk_buff *skb, u16 protocol, u32 saddr, u32 daddr, int l
 }
 
 static struct sk_buff *
-tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u16 sport, u16 dport,
-		u32 seq, u32 ack_seq, u8 *msg, int msg_len, int syn, int ack, int push, int fin)
+tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, 
+        u32 saddr, 
+        u32 daddr, 
+        u16 sport, 
+        u16 dport,
+		u32 seq, u32 ack_seq, 
+        u8 *msg, int msg_len, 
+        int syn, int ack, int push, int fin)
 {
-	int tcp_len, ip_len, eth_len, total_len, header_len;
+	int tcp_len    = 0;
+    int ip_len     = 0; 
+    int eth_len    = 0;
+    int total_len  = 0; 
+    int header_len = 0;
 	__wsum tcp_hdr_csum;
 	struct sk_buff *new_skb = NULL;
 	struct tcphdr   *new_th = NULL;
     struct vlan_hdr *new_vh = NULL;
 
 	/* calculate len by protocals */
-	tcp_len = msg_len + sizeof(struct tcphdr);
-	ip_len = tcp_len + sizeof(struct iphdr);
-	eth_len = ip_len + ETH_HLEN;
-	total_len = eth_len + NET_IP_ALIGN;
+	tcp_len    = msg_len + sizeof(struct tcphdr);
+	ip_len     = tcp_len + sizeof(struct iphdr);
+	eth_len    = ip_len  + ETH_HLEN;
+	total_len  = eth_len + NET_IP_ALIGN;
 	total_len += LL_MAX_HEADER;
 	header_len = total_len - msg_len;
 
+    TF_DEBUG("----------------");
 	/* alloc new_skb */
 	if (!(new_skb = alloc_skb(total_len, GFP_KERNEL))) {
 		TF_DEBUG("%s:alloc_skb failed!\n", __func__);
 		return NULL;
 	}
-	/* reserve for header */
+
+    TF_DEBUG("-------skb:0x%x, total_len:%d, header_len:%d---------", 
+            (unsigned int)new_skb, total_len, header_len);
+
+	/* reserve for headers */
 	skb_reserve(new_skb, header_len);
 	/* copy payload data to new_skb */
+    TF_DEBUG("----new_skb=0x%x, new_skb->data=0x%x, msg=0x%x, ----msg_len=%d--------", 
+            (unsigned int)new_skb, 
+            (unsigned int)new_skb->data, 
+            (unsigned int)msg, 
+            msg_len);
 	if (msg_len > 0) {
 		skb_copy_to_linear_data(new_skb, msg, msg_len);
 		new_skb->len += msg_len;
 	}
+    TF_DEBUG("----------------");
 	/* init tcp header info */
 	skb_push(new_skb, sizeof(struct tcphdr));
 	skb_reset_transport_header(new_skb);
@@ -301,7 +336,9 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u
 	new_th->urg = 0;
 	new_th->urg_ptr = 0;
 	new_th->window = htons(13857); //TODO?why this num?
+    TF_DEBUG("----------------");
 	tf_modify_tcp_option_timestamps((char *)(new_skb->transport_header + 20), new_th->doff*4-20);
+    TF_DEBUG("----------------");
 	
 	new_th->check = 0;
 	new_skb->csum = 0;
@@ -312,8 +349,10 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u
 	if (!new_th->check)
 		new_th->check = CSUM_MANGLED_0;
 
+    TF_DEBUG("----------------");
 	tf_skb_iphdr_init(new_skb, IPPROTO_TCP, saddr, daddr, ip_len);
     
+    TF_DEBUG("----------------");
     /* copy vlan info if needed */
     if (iskb->protocol == __constant_ntohs(ETH_P_8021Q)) {
         new_vh = (struct vlan_hdr *)skb_push(new_skb, VLAN_HLEN);
@@ -321,13 +360,15 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh, u32 saddr, u32 daddr, u
         new_vh->h_vlan_encapsulated_proto = __constant_htons(ETH_P_8021Q);
     }
 
+    TF_DEBUG("----------------");
     /* copy eth heaer info */
     eh = (struct ethhdr *)skb_push(new_skb, ETH_HLEN);
     skb_reset_mac_header(new_skb);
     new_skb->protocol = eth_hdr(iskb)->h_proto;
     eh->h_proto = eth_hdr(iskb)->h_proto;
-    memcpy(eh->h_source, eth_hdr(iskb)->h_dest, ETH_ALEN);
-    memcpy(eh->h_dest, eth_hdr(iskb)->h_source, ETH_ALEN);
+    OS_MemCpy(eh->h_source, eth_hdr(iskb)->h_dest, ETH_ALEN);
+    OS_MemCpy(eh->h_dest, eth_hdr(iskb)->h_source, ETH_ALEN);
+    TF_DEBUG("----------------");
 
 	return new_skb;
 }
@@ -385,6 +426,12 @@ tf_tcp_send_ack4fin(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
     return 0;
 }
 
+/*
+ * ETH len: 14
+ * IPH LEN: 20
+ * TCP LEN: 20
+ *
+ * */
 
 static int 
 tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, char *out_dev_name)
@@ -393,27 +440,34 @@ tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
 	u32 ack_seq = 1;
 	struct sk_buff *new_skb = NULL;
 	struct ethhdr *eh = NULL;
+    u8 *msg = NULL;
+    int msg_len = 0;
 
 	/* recalculate acknowledge sequeue number */
-	tcp_len = ntohs(iph->tot_len) - ((iph->ihl + th->doff) << 2); /* X*4 */
+
+    TF_DEBUG("iph->ihl:%d, th->doff:%d", iph->ihl, th->doff);
+	tcp_len = ntohs(iph->tot_len) - ((iph->ihl + th->doff) << 2); /* ihl & doff need "*4" */
 	if (tcp_len == 0) {/* XXXXX: syn's tcp_len = 0!!! */
 		tcp_len = 1;	/* for ack_seq +1, when ack for syn */
 	}
 	ack_seq = ntohl(th->seq) + tcp_len;
 	ack_seq = htonl(ack_seq);
 
-	skb->transport_header = (__u16)(unsigned long)((void*)iph +(iph->ihl << 2));
+	//msg = ((u8 *)iph +(iph->ihl << 2)); /* */
+    msg = skb_transport_header(skb) + 20; //+20 just skip tcp 20, tcp header,maybe > 20, which with options.
+    msg_len = (th->doff << 2) - 20; //just include tcp options.
+
 
     TF_DEBUG("tf_tcp_new_pack ...");
-	if(!(new_skb = tf_tcp_new_pack(skb, eh,
+    if(!(new_skb = tf_tcp_new_pack(skb, eh,
                     iph->daddr, 
-                                iph->saddr, 
-                                th->dest, 
-                                th->source, 
-                                seq, ack_seq, 
-                                (char *)(skb->transport_header + 20), 
-                                (th->doff * 4 - 20)/*sizeof(tcphdr)*/, 
-                                syn, ack, push, fin))) {
+                    iph->saddr, 
+                    th->dest, 
+                    th->source, 
+                    seq, ack_seq, 
+                    msg, 
+                    msg_len, 
+                    syn, ack, push, fin))) {
 		TF_DEBUG("%s:wpt_tcp_new_pack failed!\n", __func__);
 		return -1;
 	}
@@ -494,6 +548,7 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     }
 
     TF_DEBUG("get http pkt...");
+    TF_DEBUG("iph->ihl:%d, th->doff:%d", ih->ihl, th->doff);
     head_len = (ih->ihl * 4)  + (th->doff * 4);
     data_len = ntohs(ih->tot_len) - head_len;
     buf = skb->data + head_len; /* http data */
@@ -536,7 +591,7 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
              * not first fake the syn
              * */
             TF_SKB_MARK_LOG(skb, "syn pkt");
-            if (flow_mark & TF_SKB_MARK_NORMAL_PKT) {
+            if (flow_mark & TF_SKB_MARK_STA_HAS_SENT_SYN) {
                 TF_SKB_MARK_LOG(skb, "fake syn ack ...");
                 tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
                 TF_SKB_MARK_LOG(skb, "fake syn ack over");
@@ -589,12 +644,17 @@ unsigned int tf_L3_get_input_interface(
         )
 {
 
+    TF_DEBUG("skb:0x%x", (unsigned int)skb);
     TF_LOCK;
+    TF_DEBUG("skb:0x%x", (unsigned int)skb);
     if (!skb->input_if[0]) {
+        TF_DEBUG("skb:0x%x", (unsigned int)skb);
         snprintf(skb->input_if, sizeof(skb->input_if), "%s", in->name);
         TF_DEBUG("skb:0x%x, get input if name:[%s]", (unsigned int)skb, skb->input_if);
     }
+    TF_DEBUG("skb:0x%x", (unsigned int)skb);
     TF_UNLOCK;
+    TF_DEBUG("skb:0x%x", (unsigned int)skb);
 
     return NF_ACCEPT;
 }
