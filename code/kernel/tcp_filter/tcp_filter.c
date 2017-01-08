@@ -215,20 +215,23 @@ tf_destroy_skb_conntrack(struct sk_buff *skb)
     return 0;
 }
 
+//do what?
 static int
 tf_modify_tcp_option_timestamps(char *msg, int msg_len)
 {
 	int i = 0, s_val;
 	char *s = msg, *ss;
 	
+    TF_DEBUG("-------msg:0x%x, msg_len=%d---------", (unsigned int)msg, msg_len);
 	if (!msg||msg_len <= 0) {
 		return 0;
 	}
 	
+    TF_DEBUG("----------------");
 	while(i< msg_len) {
-		ss = s+i;
-		if (*ss == 8 && *(ss+1) == 10) {
-			OS_MemCpy(ss+6, ss+2, 4);
+		ss = s + i;
+		if (*ss == 8 && *(ss + 1) == 10) {
+			OS_MemCpy(ss + 6, ss + 2, 4);
 			s_val = htonl(jiffies);			
 			OS_MemCpy(ss+2, &s_val, 4);
 			i += 10;
@@ -239,6 +242,7 @@ tf_modify_tcp_option_timestamps(char *msg, int msg_len)
 		}
 
 	}
+    TF_DEBUG("----------------");
 
 	return 0;
 }
@@ -273,7 +277,8 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh,
         u16 sport, 
         u16 dport,
 		u32 seq, u32 ack_seq, 
-        u8 *msg, int msg_len, 
+        u8 *msg, 
+        int msg_len, 
         int syn, int ack, int push, int fin)
 {
 	int tcp_len    = 0;
@@ -294,7 +299,7 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh,
 	total_len += LL_MAX_HEADER;
 	header_len = total_len - msg_len;
 
-    TF_DEBUG("----------------");
+    TF_DEBUG("--------tcp_len=%d--------", tcp_len);
 	/* alloc new_skb */
 	if (!(new_skb = alloc_skb(total_len, GFP_KERNEL))) {
 		TF_DEBUG("%s:alloc_skb failed!\n", __func__);
@@ -321,7 +326,7 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh,
 	skb_push(new_skb, sizeof(struct tcphdr));
 	skb_reset_transport_header(new_skb);
 	new_th = tcp_hdr(new_skb);
-	new_skb->transport_header = (__u16)(unsigned long)new_th;
+	//new_skb->transport_header = (__u16)(unsigned long)new_th; //why do this?!!
 	memset(new_th, 0x0, sizeof(struct tcphdr));
 	new_th->doff = syn?tcp_len/4:5;
 	new_th->source = sport;
@@ -336,8 +341,8 @@ tf_tcp_new_pack(struct sk_buff *iskb, struct ethhdr *eh,
 	new_th->urg = 0;
 	new_th->urg_ptr = 0;
 	new_th->window = htons(13857); //TODO?why this num?
-    TF_DEBUG("----------------");
-	tf_modify_tcp_option_timestamps((char *)(new_skb->transport_header + 20), new_th->doff*4-20);
+    TF_DEBUG("-----new_th->doff:%d-----------", new_th->doff);
+	//tf_modify_tcp_option_timestamps((char *)(new_th + 20), ((new_th->doff) << 4) - 20);
     TF_DEBUG("----------------");
 	
 	new_th->check = 0;
@@ -453,9 +458,11 @@ tf_tcp_send_syn_ack(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *th, c
 	ack_seq = ntohl(th->seq) + tcp_len;
 	ack_seq = htonl(ack_seq);
 
+    TF_DEBUG("skb->head:0x%x, skb->transport_header:%d", (unsigned int)(skb->head), skb->transport_header);
 	//msg = ((u8 *)iph +(iph->ihl << 2)); /* */
     msg = skb_transport_header(skb) + 20; //+20 just skip tcp 20, tcp header,maybe > 20, which with options.
     msg_len = (th->doff << 2) - 20; //just include tcp options.
+    TF_DEBUG("msg:0x%x, msg_len:%d", (unsigned int)msg, msg_len);
 
 
     TF_DEBUG("tf_tcp_new_pack ...");
@@ -644,17 +651,17 @@ unsigned int tf_L3_get_input_interface(
         )
 {
 
-    TF_DEBUG("skb:0x%x", (unsigned int)skb);
+    //TF_DEBUG("skb:0x%x", (unsigned int)skb);
     TF_LOCK;
-    TF_DEBUG("skb:0x%x", (unsigned int)skb);
+    //TF_DEBUG("skb:0x%x", (unsigned int)skb);
     if (!skb->input_if[0]) {
-        TF_DEBUG("skb:0x%x", (unsigned int)skb);
+        //TF_DEBUG("skb:0x%x", (unsigned int)skb);
         snprintf(skb->input_if, sizeof(skb->input_if), "%s", in->name);
-        TF_DEBUG("skb:0x%x, get input if name:[%s]", (unsigned int)skb, skb->input_if);
+        //TF_DEBUG("skb:0x%x, get input if name:[%s]", (unsigned int)skb, skb->input_if);
     }
-    TF_DEBUG("skb:0x%x", (unsigned int)skb);
+    //TF_DEBUG("skb:0x%x", (unsigned int)skb);
     TF_UNLOCK;
-    TF_DEBUG("skb:0x%x", (unsigned int)skb);
+    //TF_DEBUG("skb:0x%x", (unsigned int)skb);
 
     return NF_ACCEPT;
 }
