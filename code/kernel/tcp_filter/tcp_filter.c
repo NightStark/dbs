@@ -511,6 +511,8 @@ static char ignore_mac[6] = {0x00,0x50,0x56,0xC0,0x00,0x10};
 #define BEGIN_WITH_HTTP_DATA(d, l) \
     ((((l) >= 3) && (0 == strncmp((d), "GET",3))) ||(((l)>= 4) && (0 == strncmp((d), "POST",4))))
 
+#define HTTP_PORT (11910)
+
 static unsigned int tf_L3_dnat(unsigned int hooknum,
 				      struct sk_buff *skb,
 				      const struct net_device *in,
@@ -525,6 +527,7 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     struct ethhdr *eh = eth_hdr(skb); 
     struct iphdr  *ih = ip_hdr(skb);
     struct tcphdr *th = NULL;
+    char *if_name = NULL;
 
     if (_mac_addr_cmp(eh->h_dest, ignore_mac) == 0 || _mac_addr_cmp(eh->h_source, ignore_mac) == 0) {
         //TF_DEBUG("ignore mac accept.");
@@ -532,7 +535,7 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     }
 
     if (skb->protocol != htons(ETH_P_IP) && skb->protocol != htons(ETH_P_8021Q)) {
-        TF_DEBUG("not ip drop.");
+        //TF_DEBUG("not ip drop.");
         //return NF_DROP; //TODO:or DROP?
         return NF_ACCEPT; //TODO:or DROP?
     }
@@ -542,19 +545,19 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     }
 
     if (ih->protocol != IPPROTO_TCP) { //TODO?Why not use htons
-        TF_DEBUG("not tcp drop.");
+        //TF_DEBUG("not tcp drop.");
         //return NF_DROP; //TODO:or DROP?
         return NF_ACCEPT; //TODO:or DROP?
     }
 
     th = (struct tcphdr *)((u8 *)ih + (ih->ihl * 4));           
-    if (ntohs(th->dest) != 80 && ntohs(th->source) != 80) {
-        TF_DEBUG("not http drop.");
+    if (ntohs(th->dest) != HTTP_PORT && ntohs(th->source) != HTTP_PORT) {
+        //TF_DEBUG("not http drop.");
         //return NF_DROP;
         return NF_ACCEPT; //TODO:or DROP?
     }
 
-    TF_DEBUG("get http pkt...");
+    TF_DEBUG("get http pkt... in if name[%s]", in->name);
     TF_DEBUG("iph->ihl:%d, th->doff:%d", ih->ihl, th->doff);
     head_len = (ih->ihl * 4)  + (th->doff * 4);
     data_len = ntohs(ih->tot_len) - head_len;
@@ -568,6 +571,9 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
 
     flow_mark &= TF_SKB_MARK_MASK;
 
+    //if_name = skb->input_if;
+    if_name = (char *)in->name;
+
     if (th->rst) {
         TF_DEBUG("TCP RST accept.");
         return NF_ACCEPT;
@@ -576,31 +582,38 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
     if (th->fin) {
         TF_SKB_MARK_LOG(skb, "fin");
         /* 4-way handshake to web server */
-        if ((ntohs(th->source) == 80) && (flow_mark & TF_SKB_MARK_NEED_FAKE_FIN)) {
+        if ((ntohs(th->source) == HTTP_PORT) && (flow_mark & TF_SKB_MARK_NEED_FAKE_FIN)) {
             TF_SKB_MARK_LOG(skb, "fake ack4fin to server");
-            tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 0);
+            tf_tcp_send_ack4fin(skb, ih, th, if_name, 0);
             tf_destroy_skb_conntrack(skb);
-            //tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
+            //tf_tcp_send_syn_ack(skb, ih, th, if_name);
             return NF_DROP;
         }
-        if ((ntohs(th->dest) == 80) && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
+        if ((ntohs(th->dest) == HTTP_PORT) && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
             TF_SKB_MARK_LOG(skb, "fake ack4fin to sta");
-            tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 0);
+            tf_tcp_send_ack4fin(skb, ih, th, if_name, 0);
             TF_SKB_MARK_LOG(skb, "fake fin to sta");
-            tf_tcp_send_ack4fin(skb, ih, th, skb->input_if, 1);
+            tf_tcp_send_ack4fin(skb, ih, th, if_name, 1);
             return NF_DROP;
         }
     }
 
+    /*
+     * C -----  SYN  ----> S
+     * C <----SYN ACK----> S
+     * C ----   ACK  ----> S
+     *
+     * */
+
     if (th->syn || (th->ack && !th->psh)) {
-        if (th->syn && (!th->psh)) {
+        if (th->syn && (!th->ack)) {
             /* let first syn go reach the real server 
              * not first fake the syn
              * */
             TF_SKB_MARK_LOG(skb, "syn pkt");
             if (flow_mark & TF_SKB_MARK_STA_HAS_SENT_SYN) {
                 TF_SKB_MARK_LOG(skb, "fake syn ack ...");
-                tf_tcp_send_syn_ack(skb, ih, th, skb->input_if);
+                tf_tcp_send_syn_ack(skb, ih, th, if_name);
                 TF_SKB_MARK_LOG(skb, "fake syn ack over");
                 return NF_DROP;
             }
@@ -615,12 +628,12 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
             
             TF_SKB_MARK_LOG(skb, "TODO:??");
             //TODO:??
-            if (ntohs(th->source) == 80 && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
+            if (ntohs(th->source) == HTTP_PORT && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
                 //debug("%s,%d, web serv ack to usr, but it's invalid for usr , drop it.\n", __func__, __LINE__);
                 return NF_DROP;
             }
             //TODO:??
-            if (ntohs(th->dest) == 80 && (flow_mark & TF_SKB_MARK_NORMAL_PKT) == 0) {
+            if (ntohs(th->dest) == HTTP_PORT && (flow_mark & TF_SKB_MARK_NORMAL_PKT) == 0) {
                 //debug("%s,%d, usr's ack to serv, but it's invalid for web server, drop it.\n", __func__, __LINE__);
                 return NF_DROP;
             }
@@ -628,13 +641,14 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
             return NF_ACCEPT;
         }
 
-        /* sta push data */
-        if (ntohs(th->dest) == 80 && th->psh && th->ack) {
-            TF_SKB_MARK_LOG(skb, "psh data");
-            if (!BEGIN_WITH_HTTP_DATA(buf, data_len)) {
-                TF_DEBUG("unknow data in 80 port, drop.");
-                return NF_DROP;
-            }
+    }
+
+    /* sta push data */
+    if (ntohs(th->dest) == HTTP_PORT && th->psh && th->ack) {
+        TF_SKB_MARK_LOG(skb, "psh data");
+        if (!BEGIN_WITH_HTTP_DATA(buf, data_len)) {
+            TF_DEBUG("unknow data in %d port, drop.", HTTP_PORT);
+            return NF_DROP;
         }
     }
 
