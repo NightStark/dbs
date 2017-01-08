@@ -668,6 +668,14 @@ unsigned int tf_L3_get_input_interface(
 
 
 static struct nf_hook_ops tcp_filter_ops[] __read_mostly = {
+	{
+		.owner = THIS_MODULE,
+		/*.hooknum =NF_BR_BROUTING,*/	/* NB: not really a hook */
+		.hooknum = NF_BR_PRE_ROUTING, 	
+		.pf = PF_BRIDGE,/* for lay-2 */
+		.priority = NF_BR_PRI_FIRST,
+        .hook = (nf_hookfn *)tf_L3_get_input_interface,    /* set mark at skb which matched rule*/
+	},
     {
         .owner = THIS_MODULE,
         .hooknum = NF_INET_PRE_ROUTING,     
