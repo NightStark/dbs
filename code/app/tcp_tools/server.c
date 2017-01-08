@@ -28,6 +28,7 @@ int ss,sc;  //ss为服务器socket描述符，sc为某一客户端通信socket�
 int main(int argc,char *argv[])
 {
 
+	int ReUseAddr = 1;
     struct sockaddr_in server_addr; //存储服务器端socket地址结构
     struct sockaddr_in client_addr; //存储客户端 socket地址结构
 
@@ -50,6 +51,11 @@ int main(int argc,char *argv[])
     else
         printf("信号挂接成功\n");
 
+    err = setsockopt(ss, 
+            SOL_SOCKET, 
+            SO_REUSEADDR, 
+            &ReUseAddr, 
+            sizeof(ReUseAddr));    
 
     /******************bind()****************/
     //初始化地址结构
@@ -98,18 +104,7 @@ int main(int argc,char *argv[])
             printf("server : connected\n");
         }
 
-        //创建一个子线程，用于与客户端通信
-        pid = fork();
-        //fork 调用说明：子进程返回 0 ；父进程返回子进程 ID
-        if(pid == 0)        //子进程，与客户端通信
-        {
-            close(ss);
-            process_conn_server(sc);
-        }
-        else
-        {
-            close(sc);
-        }
+        process_conn_server(sc);
     }
 }
 
@@ -126,7 +121,15 @@ void process_conn_server(int s)
     for(;;)
     {
         //等待读
-        for(size = 0;size == 0 ;size = read(s,buffer,buflen));
+        size = 0;
+        size = read(s,buffer,buflen);
+        if (size <= 0) {
+            close(s);
+            s = -1;
+            printf("%s", "connect break.\n");
+            break;
+        }
+
         //输出从客户端接收到的数据
         printf("%s",buffer);
 
@@ -139,6 +142,8 @@ void process_conn_server(int s)
         sprintf(buffer,"%d bytes altogether\n",size);
         write(s,buffer,strlen(buffer)+1);
     }
+
+    return;
 }
 void sig_pipe(int signo)
 {
