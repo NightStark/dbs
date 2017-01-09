@@ -586,7 +586,6 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
             TF_SKB_MARK_LOG(skb, "fake ack4fin to server");
             tf_tcp_send_ack4fin(skb, ih, th, if_name, 0);
             tf_destroy_skb_conntrack(skb);
-            //tf_tcp_send_syn_ack(skb, ih, th, if_name);
             return NF_DROP;
         }
         if ((ntohs(th->dest) == HTTP_PORT) && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
@@ -627,7 +626,8 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
             }
             
             TF_SKB_MARK_LOG(skb, "TODO:??");
-            //TODO:??
+            
+            //TODO:?? recv just ack, 可以丢弃，。
             if (ntohs(th->source) == HTTP_PORT && (flow_mark & TF_SKB_MARK_NORMAL_PKT)) {
                 //debug("%s,%d, web serv ack to usr, but it's invalid for usr , drop it.\n", __func__, __LINE__);
                 return NF_DROP;
@@ -650,6 +650,9 @@ static unsigned int tf_L3_dnat(unsigned int hooknum,
             TF_DEBUG("unknow data in %d port, drop.", HTTP_PORT);
             return NF_DROP;
         }
+        /* do fake data resp */
+
+        return NF_DROP;
     }
 
 
