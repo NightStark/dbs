@@ -6,13 +6,14 @@
 #include <ns_lilist.h>
 
 
+#if 0
 /**********************************************************************************/
 /* 双向循环链表  ( 带有尾巴节点 ) */
 /* Double Cricle List with Tail(DTQ)*/
 /**********************************************************************************/
    
 
-VOID inline LILI_Init(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail)
+VOID  LILI_Init(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail)
 {
 	pstHead->stNode.pstNext = &pstTail->stNode;
 	pstHead->stNode.pstPrev = &pstTail->stNode;
@@ -23,7 +24,7 @@ VOID inline LILI_Init(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail)
 	return;
 }
 
-VOID inline LILI_Fint(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail)
+VOID  LILI_Fint(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail)
 {
 	pstHead->stNode.pstNext = NULL;
 	pstHead->stNode.pstPrev = NULL;
@@ -34,7 +35,7 @@ VOID inline LILI_Fint(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail)
 	return;
 }
 
-VOID inline LILI_AddHead(DTQ_HEAD_S *pstHead, DTQ_NODE_S *pstNode)
+VOID  LILI_AddHead(DTQ_HEAD_S *pstHead, DTQ_NODE_S *pstNode)
 {
 	pstNode->pstPrev = &pstHead->stNode;
 	pstNode->pstNext =  pstHead->stNode.pstNext;
@@ -45,7 +46,7 @@ VOID inline LILI_AddHead(DTQ_HEAD_S *pstHead, DTQ_NODE_S *pstNode)
 	return;
 }
 
-VOID inline LILI_AddTail(DTQ_TAIL_S *pstTail, DTQ_NODE_S *pstNode)
+VOID  LILI_AddTail(DTQ_TAIL_S *pstTail, DTQ_NODE_S *pstNode)
 {
 	pstNode->pstPrev =  pstTail->stNode.pstPrev;
 	pstNode->pstNext = &pstTail->stNode;
@@ -56,7 +57,7 @@ VOID inline LILI_AddTail(DTQ_TAIL_S *pstTail, DTQ_NODE_S *pstNode)
 	return;
 }
 
-VOID inline LILI_AddAfter(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode)
+VOID  LILI_AddAfter(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode)
 {
 	pstNewNode->pstPrev = pstOldNode;
 	pstNewNode->pstNext = pstOldNode->pstNext;
@@ -67,7 +68,7 @@ VOID inline LILI_AddAfter(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode)
 	return;
 }
 
-VOID inline LILI_AddBefore(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode)
+VOID  LILI_AddBefore(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode)
 {
 	pstNewNode->pstPrev = pstOldNode->pstPrev;
 	pstNewNode->pstNext = pstOldNode;
@@ -78,7 +79,7 @@ VOID inline LILI_AddBefore(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode)
 	return;
 }
 
-VOID inline LILI_Del(DTQ_NODE_S *pstDNode, PF_FREE pfFree)
+VOID  LILI_Del(DTQ_NODE_S *pstDNode, PF_FREE pfFree)
 {
 	pstDNode->pstPrev->pstNext = pstDNode->pstNext;
 	pstDNode->pstNext->pstPrev = pstDNode->pstPrev;
@@ -89,7 +90,7 @@ VOID inline LILI_Del(DTQ_NODE_S *pstDNode, PF_FREE pfFree)
 	return;
 }
 
-VOID inline LILI_DelFirst(DTQ_HEAD_S *pstHead, PF_FREE pfFree)
+VOID  LILI_DelFirst(DTQ_HEAD_S *pstHead, PF_FREE pfFree)
 {
 	DTQ_NODE_S *pstDelNode = pstHead->stNode.pstNext;
 
@@ -102,7 +103,7 @@ VOID inline LILI_DelFirst(DTQ_HEAD_S *pstHead, PF_FREE pfFree)
 	return;
 }
 
-VOID inline LILI_DelLast(DTQ_TAIL_S *pstTail, PF_FREE pfFree)
+VOID  LILI_DelLast(DTQ_TAIL_S *pstTail, PF_FREE pfFree)
 {
 	DTQ_NODE_S *pstDelNode = pstTail->stNode.pstPrev;
 
@@ -117,7 +118,7 @@ VOID inline LILI_DelLast(DTQ_TAIL_S *pstTail, PF_FREE pfFree)
 
 
 /* WRAING: this function can delete the head and the tail node */
-VOID inline LILI_DelAfter(DTQ_NODE_S *pstFNode, PF_FREE pfFree)
+VOID  LILI_DelAfter(DTQ_NODE_S *pstFNode, PF_FREE pfFree)
 {
 	DTQ_NODE_S *pstDelNode = pstFNode->pstNext;
 
@@ -131,7 +132,7 @@ VOID inline LILI_DelAfter(DTQ_NODE_S *pstFNode, PF_FREE pfFree)
 }
 
 /* WRAING: this function can delete the head and the tail node */
-VOID inline LILI_DelBefore(DTQ_NODE_S *pstANode, PF_FREE pfFree)
+VOID  LILI_DelBefore(DTQ_NODE_S *pstANode, PF_FREE pfFree)
 {
 	DTQ_NODE_S *pstDelNode = pstANode->pstPrev;
 	
@@ -143,13 +144,14 @@ VOID inline LILI_DelBefore(DTQ_NODE_S *pstANode, PF_FREE pfFree)
 	
 	return;
 }
+#endif
 
 /**********************************************************************************/
 /* 双向循环链表  ( 不带有尾巴节点 ) */
 /* Double Cricle List(DCL)*/
 /**********************************************************************************/
 
-VOID inline DCL_Init(DCL_HEAD_S *pstHead)
+VOID  DCL_Init(DCL_HEAD_S *pstHead)
 {
 	DBGASSERT(NULL != pstHead);
 
@@ -160,7 +162,7 @@ VOID inline DCL_Init(DCL_HEAD_S *pstHead)
 	return;
 }
 
-VOID inline DCL_Fint(DCL_HEAD_S *pstHead)
+VOID  DCL_Fint(DCL_HEAD_S *pstHead)
 {
 	DBGASSERT(NULL != pstHead);
 	
@@ -170,7 +172,7 @@ VOID inline DCL_Fint(DCL_HEAD_S *pstHead)
 	return;
 }
 
-VOID inline DCL_AddHead(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
+VOID  DCL_AddHead(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
 {
 	DBGASSERT(NULL != pstHead);
 	DBGASSERT(NULL != pstNode);
@@ -184,7 +186,7 @@ VOID inline DCL_AddHead(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
 	return;
 }
 
-VOID inline DCL_AddTail(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
+VOID  DCL_AddTail(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
 {
 	DBGASSERT(NULL != pstHead);
 	DBGASSERT(NULL != pstNode);
@@ -201,7 +203,7 @@ VOID inline DCL_AddTail(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode)
 }
 
 /* pstOldNode 不会是头节点 */
-VOID inline DCL_AddAfter(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode)
+VOID  DCL_AddAfter(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode)
 {
 	DBGASSERT(NULL != pstOldNode);
 	DBGASSERT(NULL != pstNewNode);
@@ -215,7 +217,7 @@ VOID inline DCL_AddAfter(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode)
 	return;
 }
 
-VOID inline DCL_AddBefore(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode)
+VOID  DCL_AddBefore(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode)
 {
 	DBGASSERT(NULL != pstOldNode);
 	DBGASSERT(NULL != pstNewNode);
@@ -229,7 +231,7 @@ VOID inline DCL_AddBefore(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode)
 	return;
 }
 
-VOID inline DCL_Del(DCL_NODE_S *pstDNode)
+VOID  DCL_Del(DCL_NODE_S *pstDNode)
 {
 	DBGASSERT(NULL != pstDNode);
 	
@@ -239,7 +241,7 @@ VOID inline DCL_Del(DCL_NODE_S *pstDNode)
 	return;
 }
 
-VOID inline DCL_DelFirst(DCL_HEAD_S *pstHead, PF_FREE pfFree)
+VOID  DCL_DelFirst(DCL_HEAD_S *pstHead, PF_FREE pfFree)
 {
 	DCL_NODE_S *pstDelNode = NULL;
 
@@ -260,7 +262,7 @@ VOID inline DCL_DelFirst(DCL_HEAD_S *pstHead, PF_FREE pfFree)
 	return;
 }
 
-VOID inline DCL_DelLast(DCL_HEAD_S *pstHead, PF_FREE pfFree)
+VOID  DCL_DelLast(DCL_HEAD_S *pstHead, PF_FREE pfFree)
 {
 	DCL_NODE_S *pstDelNode = NULL;
 	
@@ -284,7 +286,7 @@ VOID inline DCL_DelLast(DCL_HEAD_S *pstHead, PF_FREE pfFree)
 
 
 /* WRAING: this function can delete the head and the tail node */
-VOID inline DCL_DelAfter(DCL_HEAD_S *pstHead, DCL_NODE_S *pstFNode, PF_FREE pfFree)
+VOID  DCL_DelAfter(DCL_HEAD_S *pstHead, DCL_NODE_S *pstFNode, PF_FREE pfFree)
 {
 	DCL_NODE_S *pstDelNode = NULL;
 	
@@ -307,7 +309,7 @@ VOID inline DCL_DelAfter(DCL_HEAD_S *pstHead, DCL_NODE_S *pstFNode, PF_FREE pfFr
 }
 
 /* WRAING: this function can delete the head and the tail node */
-VOID inline DCL_DelBefore(DCL_HEAD_S *pstHead, DCL_NODE_S *pstANode, PF_FREE pfFree)
+VOID  DCL_DelBefore(DCL_HEAD_S *pstHead, DCL_NODE_S *pstANode, PF_FREE pfFree)
 {
 	DCL_NODE_S *pstDelNode = NULL;
 	

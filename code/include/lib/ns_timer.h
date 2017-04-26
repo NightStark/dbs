@@ -19,8 +19,8 @@ INT   TIMER_CreateForThread(IN INT iThreadId, /* 待整合 */
                             IN VOID *pPara /* len = 4 个 字 */);
 ULONG TIMER_thread_init (VOID);
 VOID TIMER_thread_Fini (VOID);
-INLINE ULLONG TIMER_get_BootTime(VOID);
-UINT INLINE TIMER_info_ReadFdisTimerFd(IN INT iReadFd);
+ULLONG TIMER_get_BootTime(VOID);
+UINT  TIMER_info_ReadFdisTimerFd(IN INT iReadFd);
 
 #endif //__TIMER_H__
 

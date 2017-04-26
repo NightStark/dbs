@@ -3,6 +3,7 @@
 
 typedef void (*PF_FREE)(void *);
 
+#if 0
 /**********************************************************************************/
 /* 双向循环链表  ( 带有尾巴节点 ) */
 /**********************************************************************************/
@@ -49,31 +50,32 @@ typedef struct tag_DtqTail
 		(pstEntry) = ((pstEntry)->stNode.pstNext == &((pstTail)->stNode))?(NULL):\
 		container_of((pstEntry)->stNode.pstNext, typeof(*(pstEntry)), (stNode)))	   
 
-void inline LILI_Init(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail);
+void  LILI_Init(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail);
 
-void inline LILI_Fint(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail);
+void  LILI_Fint(DTQ_HEAD_S *pstHead, DTQ_TAIL_S *pstTail);
 
-void inline LILI_AddHead(DTQ_HEAD_S *pstHead, DTQ_NODE_S *pstNode);
+void  LILI_AddHead(DTQ_HEAD_S *pstHead, DTQ_NODE_S *pstNode);
 
-void inline LILI_AddTail(DTQ_TAIL_S *pstTail, DTQ_NODE_S *pstNode);
+void  LILI_AddTail(DTQ_TAIL_S *pstTail, DTQ_NODE_S *pstNode);
 
-void inline LILI_AddAfter(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode);
+void  LILI_AddAfter(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode);
 
-void inline LILI_AddBefore(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode);
-
-
-void inline LILI_Del(DTQ_NODE_S *pstDNode, PF_FREE pfFree);
-
-void inline LILI_DelFirst(DTQ_HEAD_S *pstHead, PF_FREE pfFree);
-
-void inline LILI_DelLast(DTQ_TAIL_S *pstTail, PF_FREE pfFree);
+void  LILI_AddBefore(DTQ_NODE_S *pstOldNode, DTQ_NODE_S *pstNewNode);
 
 
-/* WRAING: this function can delete the head and the tail node */
-void inline LILI_DelAfter(DTQ_NODE_S *pstFNode, PF_FREE pfFree);
+void  LILI_Del(DTQ_NODE_S *pstDNode, PF_FREE pfFree);
+
+void  LILI_DelFirst(DTQ_HEAD_S *pstHead, PF_FREE pfFree);
+
+void  LILI_DelLast(DTQ_TAIL_S *pstTail, PF_FREE pfFree);
+
 
 /* WRAING: this function can delete the head and the tail node */
-void inline LILI_DelBefore(DTQ_NODE_S *pstANode, PF_FREE pfFree);
+void  LILI_DelAfter(DTQ_NODE_S *pstFNode, PF_FREE pfFree);
+
+/* WRAING: this function can delete the head and the tail node */
+void  LILI_DelBefore(DTQ_NODE_S *pstANode, PF_FREE pfFree);
+#endif
 
 /**********************************************************************************/
 /* 双向循环链表  ( 不带有尾巴节点 ) */
@@ -149,31 +151,31 @@ pos = n, n = list_entry(n->member.next, typeof(*n), member))
 */
 
 
-void inline DCL_Init(DCL_HEAD_S *pstHead);
+void  DCL_Init(DCL_HEAD_S *pstHead);
 
-void inline DCL_Fint(DCL_HEAD_S *pstHead);
+void  DCL_Fint(DCL_HEAD_S *pstHead);
 
-void inline DCL_AddHead(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode);
+void  DCL_AddHead(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode);
 
-void inline DCL_AddTail(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode);
+void  DCL_AddTail(DCL_HEAD_S *pstHead, DCL_NODE_S *pstNode);
 
 /* pstOldNode 不会是头节点 */
-void inline DCL_AddAfter(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode);
+void  DCL_AddAfter(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode);
 
-void inline DCL_AddBefore(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode);
+void  DCL_AddBefore(DCL_NODE_S *pstOldNode, DCL_NODE_S *pstNewNode);
 
-void inline DCL_Del(DCL_NODE_S *pstDNode);
+void  DCL_Del(DCL_NODE_S *pstDNode);
 
-void inline DCL_DelFirst(DCL_HEAD_S *pstHead, PF_FREE pfFree);
+void  DCL_DelFirst(DCL_HEAD_S *pstHead, PF_FREE pfFree);
 
-void inline DCL_DelLast(DCL_HEAD_S *pstHead, PF_FREE pfFree);
+void  DCL_DelLast(DCL_HEAD_S *pstHead, PF_FREE pfFree);
 
-
-/* WRAING: this function can delete the head and the tail node */
-void inline DCL_DelAfter(DCL_HEAD_S *pstHead, DCL_NODE_S *pstFNode, PF_FREE pfFree);
 
 /* WRAING: this function can delete the head and the tail node */
-void inline DCL_DelBefore(DCL_HEAD_S *pstHead, DCL_NODE_S *pstANode, PF_FREE pfFree);
+void  DCL_DelAfter(DCL_HEAD_S *pstHead, DCL_NODE_S *pstFNode, PF_FREE pfFree);
+
+/* WRAING: this function can delete the head and the tail node */
+void  DCL_DelBefore(DCL_HEAD_S *pstHead, DCL_NODE_S *pstANode, PF_FREE pfFree);
 
 #define LILI_NT_DELALL_ENTRY(pstHead, pstEntry, stNode, pfree) 							\
 		for(pstEntry = ((pstHead)->stNode.pstNext == NULL)?(NULL):						\

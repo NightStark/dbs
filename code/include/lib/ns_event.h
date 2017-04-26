@@ -10,8 +10,8 @@ typedef struct t_evt_pipe_fds
 
 INT EVENT_Create(VOID);
 VOID EVENT_Destroy(IN INT iReadFd);
-INT INLINE EVENT_ReadFD_2_WriteFd(IN INT iReadFd);
-INT INLINE EVENT_WriteFD_2_ReadFd(IN INT iWriteFd);
+INT  EVENT_ReadFD_2_WriteFd(IN INT iReadFd);
+INT  EVENT_WriteFD_2_ReadFd(IN INT iWriteFd);
 ULONG EVENT_fd_list_Init(void);
 ULONG EVENT_SendEvt(IN INT iWriteFd);
 

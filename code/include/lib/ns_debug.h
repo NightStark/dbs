@@ -8,7 +8,7 @@
 #include <ns_log.h>
 
 
-unsigned long inline get_demsg_seq(void);
+unsigned long  get_demsg_seq(void);
 void Dbg_Print_Log(const char *pcFileName, char *pcChar, unsigned long ulLen);
 
 #define DBGASSERT(exp) 	\
@@ -58,9 +58,9 @@ typedef struct tag_DBG_PRINT_BUFFER
     DBG_TYPE_E enDbgType;
 }DBG_PRINT_BUFFER_S;
 
-inline VOID Debug_DestroyPrintData(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf);
+ VOID Debug_DestroyPrintData(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf);
 	
-VOID inline Dbg_print(IN DBG_TYPE_E enDbgType, 
+VOID  Dbg_print(IN DBG_TYPE_E enDbgType, 
                       IN INT   iModID,
 					  IN const CHAR *pcDbgFileName,
 					  IN const CHAR *pcDbgFunName, 
@@ -183,17 +183,17 @@ typedef enum DBGTHRDPRINTFFLAG
 	DBG_TPF_MAX,
 }DBG_THRD_PRINTF_FLAG_E;
 
-inline BOOL_T Dbg_Thread_ISDebugThread(VOID);
-inline VOID Dbg_Thread_SetDbgThreadPrintFlag(DBG_THRD_PRINTF_FLAG_E enDbgFlag);
-inline DBG_THRD_PRINTF_FLAG_E Dbg_Thread_GetDbgThreadPrintFlag(VOID);
-inline INT Dbg_Thread_GetDbgThreadEventFd(VOID);
+ BOOL_T Dbg_Thread_ISDebugThread(VOID);
+ VOID Dbg_Thread_SetDbgThreadPrintFlag(DBG_THRD_PRINTF_FLAG_E enDbgFlag);
+ DBG_THRD_PRINTF_FLAG_E Dbg_Thread_GetDbgThreadPrintFlag(VOID);
+ INT Dbg_Thread_GetDbgThreadEventFd(VOID);
 
 VOID   Dbg_Thread_SetDbgThreadID(IN INT iDbgThrdId);
 ULONG  DBG_Thread_Init(VOID);
 VOID   DBG_thread_Fini(VOID);
 BOOL_T DBG_thread_IsRun(VOID);
 BOOL_T DBG_thread_IsStop(VOID);
-inline ULONG Dbg_thread_WriteDbgMsgList(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf);
+ULONG Dbg_thread_WriteDbgMsgList(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf);
 
 VOID  DBG_print_ByType(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf);
 VOID  Dbg_process_ByFriend(IN DBG_PRINT_BUFFER_S *pstDbgPrintBuf);

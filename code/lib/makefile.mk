@@ -10,7 +10,7 @@ include $(DIR_LIB)/fsm/makefile.mk
 include $(DIR_LIB)/http_parser/http_parser.mk
 include $(DIR_LIB)/log/makefile.mk
 include $(DIR_LIB)/msg/makefile.mk
-include $(DIR_LIB)/mysql/mysql.mk
+#include $(DIR_LIB)/mysql/mysql.mk
 include $(DIR_LIB)/net/makefile.mk
 include $(DIR_LIB)/nstest/makefile.mk
 include $(DIR_LIB)/openssl/openssl.mk

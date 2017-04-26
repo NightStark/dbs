@@ -87,7 +87,7 @@ NS_INCLUDE_PATH=include/lib
 #-fpic : 位置无关码就是可以在进程的任意内存位置执行的目标码
 #CFLAGS = -Wall -lpthread -I include/lib/ -lm -lrt -ggdb -Wall 
 CFLAGS = -Wall -lpthread -I $(NS_INCLUDE_PATH) -lm -lrt -ggdb -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl 
-CFLAGS += -lmysqlclient -L/usr/lib64/mysql/
+#CFLAGS += -lmysqlclient -L/usr/lib64/mysql/
 #OBJ_FLAGS =  -g -lpthread -I include/lib/ -fpic -lm -Wall 
 OBJ_FLAGS =  -ggdb -lpthread -I $(NS_INCLUDE_PATH) -fpic -lm -Wall -DNS_EVENTFD -DNS_TIMERFD -lcrypto -lssl -I include/config/
 
