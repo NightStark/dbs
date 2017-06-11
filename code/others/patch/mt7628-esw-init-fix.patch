@@ -1,0 +1,161 @@
+diff -Naru a/drivers/net/ethernet/ralink/esw_rt3052.c b/drivers/net/ethernet/ralink/esw_rt3052.c
+--- a/drivers/net/ethernet/ralink/esw_rt3052.c	2017-06-11 16:13:55.031661667 +0800
++++ b/drivers/net/ethernet/ralink/esw_rt3052.c	2017-06-11 16:12:46.868511330 +0800
+@@ -278,6 +278,63 @@
+ 	spin_unlock_irqrestore(&esw->reg_rw_lock, flags);
+ }
+ 
++#define __RALINK_SYSCTL_BASE 0xB0000000
++#define GPIO_PURPOSE_SELECT	0x60
++#define GPIO_PRUPOSE		(__RALINK_SYSCTL_BASE + GPIO_PURPOSE_SELECT)
++
++#define PHYS_TO_K1(physaddr) KSEG1ADDR(physaddr)
++#define sysRegRead(phys) (*(volatile unsigned int *)PHYS_TO_K1(phys))
++__attribute__((optimize("O0"))) inline void sysRegWrite(unsigned int phys, unsigned int val)
++{
++	unsigned int reg;
++	(*(volatile unsigned int *)PHYS_TO_K1(phys)) = (val);
++	reg=(*(volatile unsigned int *)((phys)));
++	return;
++}
++
++#define RALINK_ETH_SW_BASE		0xB0110000
++#define PHY_CONTROL_0 		0xC0   
++#define PHY_CONTROL_1 		0xC4   
++#define MDIO_PHY_CONTROL_0	(RALINK_ETH_SW_BASE + PHY_CONTROL_0)
++#define MDIO_PHY_CONTROL_1 	(RALINK_ETH_SW_BASE + PHY_CONTROL_1)
++u32 mii_mgr_read(u32 phy_addr, u32 phy_register, u32 *read_data)
++{
++    u32 volatile status = 0;
++    u32 rc = 0;
++    unsigned long volatile t_start = jiffies;
++
++    // make sure previous read operation is complete
++    while (1) {
++        // rd_rdy: read operation is complete
++        if(!( sysRegRead(MDIO_PHY_CONTROL_1) & (0x1 << 1))) 
++        {
++            break;
++        }
++        else if (time_after(jiffies, t_start + 5*HZ)) {
++            printk("\n MDIO Read operation is ongoing !!\n");
++            return rc;
++        }
++    }
++
++    sysRegWrite(MDIO_PHY_CONTROL_0 , (1<<14) | (phy_register << 8) | (phy_addr));
++    //printk("\n Set Command [0x%08X] to PHY !!\n",MDIO_PHY_CONTROL_0);
++
++    // make sure read operation is complete
++    t_start = jiffies;
++    while (1) {
++        if (sysRegRead(MDIO_PHY_CONTROL_1) & (0x1 << 1)) {
++            status = sysRegRead(MDIO_PHY_CONTROL_1);
++            *read_data = (u32)(status >>16);
++
++            return 1;
++        }
++        else if (time_after(jiffies, t_start+5*HZ)) {
++            printk("\n MDIO Read operation is ongoing and Time Out!!\n");
++            return 0;
++        }
++    }
++}
++
+ static u32 rt305x_mii_write(struct rt305x_esw *esw, u32 phy_addr, u32 phy_register,
+ 		 u32 write_data)
+ {
+@@ -568,7 +625,6 @@
+ 	} else if (ralink_soc == RT305X_SOC_RT5350) {
+ 		/* reset EPHY */
+ 		fe_reset(RT5350_RESET_EPHY);
+-
+ 		/* set the led polarity */
+ 		esw_w32(esw, esw->reg_led_polarity & 0x1F, RT5350_EWS_REG_LED_POLARITY);
+ 
+@@ -620,11 +676,41 @@
+ 		rt305x_mii_write(esw, 0, 31, 0x8000);
+ 	} else if (ralink_soc == MT762X_SOC_MT7628AN || ralink_soc == MT762X_SOC_MT7688) {
+ 		int i;
+-//		u32 phy_val;
++		u32 phy_val;
+ 		u32 val;
+ 
+ 		/* reset EPHY */
+-		fe_reset(RT5350_RESET_EPHY);
++		//fe_reset(RT5350_RESET_EPHY);
++        #define RALINK_SYSCTL_BASE      0xB0000000
++        #define RT2880_AGPIOCFG_REG (RALINK_SYSCTL_BASE + 0x3C)
++        #define MT7628_P0_EPHY_AIO_EN          (0x1<<16)
++        #define MT7628_P1_EPHY_AIO_EN          (0x1<<17)
++        #define MT7628_P2_EPHY_AIO_EN          (0x1<<18)
++        #define MT7628_P3_EPHY_AIO_EN          (0x1<<19)
++        #define MT7628_P4_EPHY_AIO_EN          (0x1<<20)
++        #define RSTCTRL         (RALINK_SYSCTL_BASE + 0x34)
++        #define RALINK_EPHY_RST         (1<<24)
++
++        val = sysRegRead(RT2880_AGPIOCFG_REG);
++        val = val & ~(MT7628_P0_EPHY_AIO_EN | MT7628_P1_EPHY_AIO_EN | MT7628_P2_EPHY_AIO_EN | MT7628_P3_EPHY_AIO_EN | MT7628_P4_EPHY_AIO_EN);
++        if ((*((volatile u32 *)(RALINK_SYSCTL_BASE + 0x8))) & 0x10000) {
++            val &= ~0x1f0000;
++        }
++        sysRegWrite(RT2880_AGPIOCFG_REG, val);
++
++        val = sysRegRead(RSTCTRL);
++        val = val | RALINK_EPHY_RST;
++        sysRegWrite(RSTCTRL, val);
++        val = val & ~(RALINK_EPHY_RST);
++        sysRegWrite(RSTCTRL, val);
++
++        val = sysRegRead(RALINK_SYSCTL_BASE + 0x64);
++
++        val &= 0xf003f003;
++        sysRegWrite(RALINK_SYSCTL_BASE + 0x64, val); // set P0~P4 EPHY LED mode
++
++        udelay(5000);
++
+ 
+ 		rt305x_mii_write(esw, 0, 31, 0x2000); /* change G2 page */
+ 		rt305x_mii_write(esw, 0, 26, 0x0020);
+@@ -635,6 +721,12 @@
+ //			mii_mgr_read(i, 26, &phy_val);// EEE setting
+ //			phy_val |= (1 << 5);
+ //			rt305x_mii_write(esw, i, 26, phy_val);
++
++            rt305x_mii_write(esw, i, 13, 0x7);
++            rt305x_mii_write(esw, i, 14, 0x3C);
++            rt305x_mii_write(esw, i, 13, 0x4007);
++            rt305x_mii_write(esw, i, 14, 0x0);
++
+ 			rt305x_mii_write(esw, i, 30, 0xa000);
+ 			rt305x_mii_write(esw, i, 31, 0xa000); // change L2 page
+ 			rt305x_mii_write(esw, i, 16, 0x0606);
+@@ -642,11 +734,12 @@
+ 			rt305x_mii_write(esw, i, 24, 0x1610);
+ 			rt305x_mii_write(esw, i, 30, 0x1f15);
+ 			rt305x_mii_write(esw, i, 28, 0x6111);
+-//			mii_mgr_read(i, 4, &phy_val);
+-//			phy_val |= (1 << 10);
+-//			rt305x_mii_write(esw, i, 4, phy_val);
+-			rt305x_mii_write(esw, i, 31, 0x2000); // change G2 page
+-			rt305x_mii_write(esw, i, 26, 0x0000);
++
++			mii_mgr_read(i, 4, &phy_val);
++			phy_val |= (1 << 10);
++			rt305x_mii_write(esw, i, 4, phy_val);
++			//rt305x_mii_write(esw, i, 31, 0x2000); // change G2 page
++			//rt305x_mii_write(esw, i, 26, 0x0000);
+ 		}
+ 
+ 		//100Base AOI setting
+@@ -663,6 +756,10 @@
+ 		rt305x_mii_write(esw, 0, 28, 0x0233);
+ 		rt305x_mii_write(esw, 0, 29, 0x000a);
+ 		rt305x_mii_write(esw, 0, 30, 0x0000);
++        /* Fix EPHY idle state abnormal behavior */
++        rt305x_mii_write(esw, 0, 31, 0x4000); //change G4 page
++        rt305x_mii_write(esw, 0, 29, 0x000d);
++        rt305x_mii_write(esw, 0, 30, 0x0500);
+ 	} else {
+ 		rt305x_mii_write(esw, 0, 31, 0x8000);
+ 		for (i = 0; i < 5; i++) {
