@@ -41,7 +41,7 @@ do { \
 #define _sys_popen popen
 #define _sys_pclose pclose
 
-#define TYSCC_LOG(level, fmt, ...) \
+#define _LOG(level, fmt, ...) \
     do { \
         printf("[%s][%d]"fmt"\n" , __func__, __LINE__, ##__VA_ARGS__); \
     } while (0)
@@ -57,7 +57,7 @@ cmd_mng_info_create(char *cmd)
 
     cmd_info = malloc(sizeof(CMD_MNG_INFO_ST));
     if (cmd_info == NULL) {
-        TYSCC_LOG(LOG_DEBUG, "oom");
+        _LOG(LOG_DEBUG, "oom");
         return NULL;
     }
     memset(cmd_info, 0, sizeof(CMD_MNG_INFO_ST));
@@ -105,25 +105,25 @@ static void cmd_read_cb(int fd, short event, void *arg)
 
     cmd_info = (CMD_MNG_INFO_ST *)arg;
     if (NULL == cmd_info) {
-        TYSCC_LOG(LOG_ERR, "invalid arg");
+        _LOG(LOG_ERR, "invalid arg");
         return;
     }
 
-    TYSCC_LOG(LOG_DEBUG, "cmd:[%s]", cmd_info->cmd);
+    _LOG(LOG_DEBUG, "cmd:[%s]", cmd_info->cmd);
 
     len = read(fd, cmd_info->value + cmd_info->value_p, 
             sizeof(cmd_info->value) - cmd_info->value_p - 1);
     if (len < 0) {
-        TYSCC_LOG(LOG_DEBUG, "fread failed of cmd[%s].", "cmd");
+        _LOG(LOG_DEBUG, "fread failed of cmd[%s].", "cmd");
         return;
     }
     cmd_info->value_p += len;
     cmd_info->value[cmd_info->value_p] = '\0';
-    TYSCC_LOG(LOG_DEBUG, "cmd result:====[len:%d][%s]====", len, cmd_info->value);
+    _LOG(LOG_DEBUG, "cmd result:====[len:%d][%s]====", len, cmd_info->value);
     pend = strstr(cmd_info->value, "__TYGGCMDEND__");
 
     if (len == 0 || pend) {
-        TYSCC_LOG(LOG_DEBUG, "cmd run over ====[%d][%s]====", len, cmd_info->value);
+        _LOG(LOG_DEBUG, "cmd run over ====[%d][%s]====", len, cmd_info->value);
         CMD_MNG_LOCK; 
         list_del(&cmd_info->node);
         cmd_mng_info_destroy(cmd_info);
@@ -148,12 +148,12 @@ int get_cmd_result_async(char *cmd)
     CMD_MNG_LOCK;
     if (!g_evt_base_is_ready) {
         CMD_MNG_UNLOCK;
-        TYSCC_LOG(LOG_ERR, "cmd evt base is not ready.");
+        _LOG(LOG_ERR, "cmd evt base is not ready.");
         return -1;
     }
     CMD_MNG_UNLOCK;
 
-    TYSCC_LOG(LOG_DEBUG, "get cmd [%s]", cmd);
+    _LOG(LOG_DEBUG, "get cmd [%s]", cmd);
 
     cmd_info = cmd_mng_info_create(cmd);
     if (NULL == cmd_info) {
@@ -162,7 +162,7 @@ int get_cmd_result_async(char *cmd)
 
     fp = _sys_popen(cmd_info->cmd, "r");
     if (fp == NULL ) {
-        TYSCC_LOG(LOG_DEBUG, "popen failed of cmd[%s].", cmd);
+        _LOG(LOG_DEBUG, "popen failed of cmd[%s].", cmd);
         return -1;
     }
 
@@ -174,7 +174,7 @@ int get_cmd_result_async(char *cmd)
 
     eventfd_event = event_new(g_evt_base, fd, EV_READ | EV_PERSIST | EV_ET, cmd_read_cb, cmd_info); 
     if (eventfd_event == NULL) {
-        TYSCC_LOG(LOG_DEBUG, "event new failed");
+        _LOG(LOG_DEBUG, "event new failed");
         goto error;
     }
     cmd_info->ev = eventfd_event;
@@ -205,10 +205,10 @@ struct timeval g_timeout;
 static void cmd_timer_cb(int fd, short kind, void *userp)
 {
 
-    //TYSCC_LOG(LOG_DEBUG, "------------------");
+    //_LOG(LOG_DEBUG, "------------------");
     //TODO:can not kill sub-process of sh!!!
     //_sys_ptimeout();
-    //TYSCC_LOG(LOG_DEBUG, "------------------");
+    //_LOG(LOG_DEBUG, "------------------");
 
     evtimer_add(g_timer_event, &g_timeout);
     return;
@@ -218,7 +218,7 @@ static int init_cmd_timer(void)
 {
     g_timer_event = evtimer_new(g_evt_base, cmd_timer_cb, NULL);
 	if (NULL == g_timer_event) {
-		TYSCC_LOG(LOG_ERR, "event new failed.\n");
+		_LOG(LOG_ERR, "event new failed.\n");
         return -1;
 	}
 
@@ -230,12 +230,12 @@ void *cmd_work_thrd(void *args)
 {
     int ret = 0;
 
-    TYSCC_LOG(LOG_DEBUG, "cmd work start ...");
+    _LOG(LOG_DEBUG, "cmd work start ...");
     CMD_MNG_LOCK;
     g_evt_base = event_base_new();
     CMD_MNG_UNLOCK;
 	if (NULL == g_evt_base) {
-		TYSCC_LOG(LOG_ERR, "event base new failed.\n");
+		_LOG(LOG_ERR, "event base new failed.\n");
 		return NULL;
 	}
 
@@ -249,11 +249,11 @@ void *cmd_work_thrd(void *args)
     /*NOTE: if g_evt_base not add a event, event_base_dispatch will exit */
     ret = event_base_dispatch(g_evt_base);
     if (ret != 0) {
-        TYSCC_LOG(LOG_DEBUG, "event_base_dispatch error:%d", ret);
+        _LOG(LOG_DEBUG, "event_base_dispatch error:%d", ret);
         perror("event_base_dispatch");
     }
 
-    TYSCC_LOG(LOG_DEBUG, "cmd work exit");
+    _LOG(LOG_DEBUG, "cmd work exit");
 
     evtimer_del(g_timer_event);
     event_free(g_timer_event);
@@ -272,7 +272,7 @@ int cmd_work_init(void)
     pthread_attr_init(&cmd_work_attr);
     pthread_attr_setdetachstate(&cmd_work_attr, PTHREAD_CREATE_DETACHED);
     if (0 != pthread_create(&cmd_work_tid, &cmd_work_attr, cmd_work_thrd, NULL)) {
-        TYSCC_LOG(LOG_ERR, "postman signup therad create failed");
+        _LOG(LOG_ERR, "postman signup therad create failed");
         return -1;
     }
 
@@ -305,7 +305,7 @@ int main()
 
     //get_cmd_result_async("ls -al");
 
-    //TYSCC_LOG(LOG_DEBUG, "cmd result:====[%s]====", buf);
+    //_LOG(LOG_DEBUG, "cmd result:====[%s]====", buf);
     
     while(cnt < 4) {
     /*
