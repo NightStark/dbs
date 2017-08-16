@@ -36,6 +36,7 @@ typedef struct if_addr_info
 
 IF_ADDR_INFO_ST ifinfo_apcli0;
 IF_ADDR_INFO_ST ifinfo_eth02;
+char gwif_buf[32] = {0};
 
 char *ip2str(unsigned int ipv4, char *str_ip, unsigned int str_len)
 {
@@ -205,10 +206,10 @@ error:
 static int route_item_adjust(const char *ifname, ROUTE_ACT_EN rt_act) 
 {
     char cmd_buf[256];   
-    char gwif_buf[32] = {0};
     IF_ADDR_INFO_ST *ifi = NULL;
 
     if (rt_act == ROUTE_ACT_DOWN) {
+        #if 0
         get_cmd_result_line("cat /proc/net/route | awk '{if($2==\"00000000\"){print $1}}'",
                 gwif_buf, sizeof(gwif_buf)); 
 
@@ -216,10 +217,11 @@ static int route_item_adjust(const char *ifname, ROUTE_ACT_EN rt_act)
             __LOG(LOG_DEBUG, "no route now, check up if!!!\n");
             return -1;
         }
+        #endif
 
         __LOG(LOG_DEBUG, "gwif : %s\n", gwif_buf);
         if (strncmp(ifname, gwif_buf, strlen(gwif_buf) + 1) != 0) {
-            __LOG(LOG_DEBUG, "%s is not use if, skip.\n", gwif_buf);
+            __LOG(LOG_DEBUG, "%s is not use if, skip.\n", ifname);
             return 0;
         }
 
@@ -228,7 +230,7 @@ static int route_item_adjust(const char *ifname, ROUTE_ACT_EN rt_act)
             /* if (apcli0 is real connection) { */
             ifi = &ifinfo_apcli0;
             /* } else { return -1 }} */
-        } else if (strncmp(ifname, "apcli0", strlen("eth0.2") + 1) == 0) {
+        } else if (strncmp(ifname, "apcli0", strlen("apcli0") + 1) == 0) {
             /* if (eth0.2 is up) { */
             /* if (eth0.2 is real connection) { */
             ifi = &ifinfo_eth02;
@@ -238,12 +240,13 @@ static int route_item_adjust(const char *ifname, ROUTE_ACT_EN rt_act)
         snprintf(cmd_buf, sizeof(cmd_buf), "%s", "route del default");
         __LOG(LOG_DEBUG, "cmd_buf[%s]\n", cmd_buf);
         system(cmd_buf);
-        snprintf(cmd_buf, sizeof(cmd_buf), "route add default gw %s netmask 0.0.0.0 dev apcli0", ifi->gw);
+        snprintf(cmd_buf, sizeof(cmd_buf), "route add default gw %s netmask 0.0.0.0 dev %s", ifi->gw, ifi->ifname);
         __LOG(LOG_DEBUG, "cmd_buf[%s]\n", cmd_buf);
         system(cmd_buf);
-        snprintf(cmd_buf, sizeof(cmd_buf), "route add -host %s  dev apcli0", ifi->gw);
+        snprintf(cmd_buf, sizeof(cmd_buf), "route add -host %s  dev %s", ifi->gw, ifi->ifname);
         __LOG(LOG_DEBUG, "cmd_buf[%s]\n", cmd_buf);
         system(cmd_buf);
+        snprintf(gwif_buf, sizeof(gwif_buf), "%s", ifi->ifname);
     }
     
     return 0;
@@ -306,13 +309,15 @@ void parse_netlink_add_route(struct nlmsghdr *nlh)
         rta = RTA_NEXT(rta, len);  
     }  
 
-    if (strncmp(ifname, "apcli0", strlen("apcli0") + 1) == 0) {
-        get_if_addr_infos(&ifinfo_apcli0);
-        //snprintf(ifinfo_apcli0.gw, sizeof(ifinfo_apcli0.gw), "%s", gateway);
-        ip2str(gateway, ifinfo_apcli0.gw, sizeof(ifinfo_apcli0.gw));
-    } else if (strncmp(ifname, "eth0.2", strlen("eth0.2") + 1) == 0) {
-        get_if_addr_infos(&ifinfo_eth02);
-        ip2str(gateway, ifinfo_eth02.gw, sizeof(ifinfo_eth02.gw));
+    if (gateway) {
+        if (strncmp(ifname, "apcli0", strlen("apcli0") + 1) == 0) {
+            get_if_addr_infos(&ifinfo_apcli0);
+            ip2str(gateway, ifinfo_apcli0.gw, sizeof(ifinfo_apcli0.gw));
+        } else if (strncmp(ifname, "eth0.2", strlen("eth0.2") + 1) == 0) {
+            get_if_addr_infos(&ifinfo_eth02);
+            ip2str(gateway, ifinfo_eth02.gw, sizeof(ifinfo_eth02.gw));
+        }
+        snprintf(gwif_buf, sizeof(gwif_buf), "%s", ifname);
     }
 
     return;
@@ -388,7 +393,7 @@ int main(int argc, char* argv[])
     struct sockaddr_nl addr;  
 
     snprintf(ifinfo_apcli0.ifname, sizeof(ifinfo_apcli0.ifname), "%s", "apcli0");
-    snprintf(ifinfo_eth02.ifname, sizeof(ifinfo_eth02.ifname), "%s", "eth02");
+    snprintf(ifinfo_eth02.ifname, sizeof(ifinfo_eth02.ifname), "%s", "eth0.2");
 
     if ((nl_sk = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {  
         perror("couldn't open NETLINK_ROUTE nl_sket");  
