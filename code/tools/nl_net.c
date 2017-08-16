@@ -17,6 +17,9 @@
         printf("[%s][%d]"fmt"\n" , __func__, __LINE__, ##__VA_ARGS__); \
     } while (0)
 
+#define IF_NAME_APCLI0 "apcli0"
+#define IF_NAME_ETH02 "eth0.2"
+
 typedef enum route_act
 {
     ROUTE_ACT_DOWN = 0,
@@ -32,6 +35,7 @@ typedef struct if_addr_info
     char mask[16];
     char dst[16];
     char gw[16];
+    int gw_set;
 }IF_ADDR_INFO_ST;
 
 IF_ADDR_INFO_ST ifinfo_apcli0;
@@ -225,16 +229,24 @@ static int route_item_adjust(const char *ifname, ROUTE_ACT_EN rt_act)
             return 0;
         }
 
-        if (strncmp(ifname, "eth0.2", strlen("eth0.2") + 1) == 0) {
+        if (strncmp(ifname, IF_NAME_ETH02, strlen(IF_NAME_ETH02) + 1) == 0) {
+            ifinfo_eth02.gw_set = 0;
             /* if (apcli0 is up) { */
             /* if (apcli0 is real connection) { */
             ifi = &ifinfo_apcli0;
             /* } else { return -1 }} */
-        } else if (strncmp(ifname, "apcli0", strlen("apcli0") + 1) == 0) {
+        } else if (strncmp(ifname, IF_NAME_APCLI0, strlen(IF_NAME_APCLI0) + 1) == 0) {
+            ifinfo_apcli0.gw_set = 0;
             /* if (eth0.2 is up) { */
             /* if (eth0.2 is real connection) { */
             ifi = &ifinfo_eth02;
             /* } else { return -1 }} */
+        }
+
+        /* if the other if is down, give up adjust */
+        if (0 == ifi->gw_set) {
+            __LOG(LOG_DEBUG, "%s is set gw, give up.\n", ifi->ifname);
+            return 0;
         }
 
         snprintf(cmd_buf, sizeof(cmd_buf), "%s", "route del default");
@@ -310,12 +322,14 @@ void parse_netlink_add_route(struct nlmsghdr *nlh)
     }  
 
     if (gateway) {
-        if (strncmp(ifname, "apcli0", strlen("apcli0") + 1) == 0) {
+        if (strncmp(ifname, IF_NAME_APCLI0, strlen(IF_NAME_APCLI0) + 1) == 0) {
             get_if_addr_infos(&ifinfo_apcli0);
             ip2str(gateway, ifinfo_apcli0.gw, sizeof(ifinfo_apcli0.gw));
-        } else if (strncmp(ifname, "eth0.2", strlen("eth0.2") + 1) == 0) {
+            ifinfo_apcli0.gw_set = 1;
+        } else if (strncmp(ifname, IF_NAME_ETH02, strlen(IF_NAME_ETH02) + 1) == 0) {
             get_if_addr_infos(&ifinfo_eth02);
             ip2str(gateway, ifinfo_eth02.gw, sizeof(ifinfo_eth02.gw));
+            ifinfo_eth02.gw_set = 1;
         }
         snprintf(gwif_buf, sizeof(gwif_buf), "%s", ifname);
     }
@@ -392,8 +406,8 @@ int main(int argc, char* argv[])
     struct nlmsghdr *nlh = NULL;;  
     struct sockaddr_nl addr;  
 
-    snprintf(ifinfo_apcli0.ifname, sizeof(ifinfo_apcli0.ifname), "%s", "apcli0");
-    snprintf(ifinfo_eth02.ifname, sizeof(ifinfo_eth02.ifname), "%s", "eth0.2");
+    snprintf(ifinfo_apcli0.ifname, sizeof(ifinfo_apcli0.ifname), "%s", IF_NAME_APCLI0);
+    snprintf(ifinfo_eth02.ifname, sizeof(ifinfo_eth02.ifname), "%s", IF_NAME_ETH02);
 
     if ((nl_sk = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {  
         perror("couldn't open NETLINK_ROUTE nl_sket");  
