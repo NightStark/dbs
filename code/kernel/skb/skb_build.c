@@ -22,6 +22,8 @@
 #include <linux/version.h>
 #include <linux/inet.h>
 
+#include <linux/vmalloc.h>
+
 #include <asm/io.h>
 #define UP_MSG_PRINTF(fmt, ...) \
     printk("[%s][%d]", __func__, __LINE__); \
@@ -290,9 +292,39 @@ static int __skb_build_skb_v6(void)
 
 static int __init skb_build_init(void)
 {
+    char *vm = NULL;
+    unsigned int vm_phys;
+    char *km = NULL;
+    unsigned int km_phys;
+    unsigned int hm_phys;
+
     //__skb_build_skb_v4();
-    __skb_build_skb_v6();
+    //__skb_build_skb_v6();
     UP_MSG_PRINTF("init success.");
+
+    hm_phys = virt_to_phys(high_memory);
+    printk("high_memory:0x%08X phys:%08X\n", (unsigned int)high_memory, hm_phys);
+    vm = vmalloc(256 * 1024);
+    if (vm) {
+        printk("vmalloc success!\n");
+        vm_phys = virt_to_phys(vm);
+        printk("vm:0x%08X vm_phys:0x%08X\n", (unsigned int)vm, vm_phys);
+
+        vfree(vm);
+        vm = NULL;
+    }
+
+    km = kmalloc(1024, GFP_KERNEL);
+    if (km) {
+        printk("kmalloc success!\n");
+        km_phys = virt_to_phys(km);
+        printk("km:0x%08X km_phys:0x%08X\n", (unsigned int)km, km_phys);
+
+        kfree(km);
+        km = NULL;
+    }
+    
+
 
     return 0;
 }
